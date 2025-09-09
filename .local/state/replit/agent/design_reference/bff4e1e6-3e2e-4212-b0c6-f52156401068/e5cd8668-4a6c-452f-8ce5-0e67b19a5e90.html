@@ -1,0 +1,1273 @@
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KushKlicker - Cannabis Mining Game</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          borderRadius: {
+            lg: "var(--radius)",
+            md: "calc(var(--radius) - 2px)",
+            sm: "calc(var(--radius) - 4px)",
+          },
+          colors: {
+            background: "var(--background)",
+            foreground: "var(--foreground)",
+            card: {
+              DEFAULT: "var(--card)",
+              foreground: "var(--card-foreground)",
+            },
+            popover: {
+              DEFAULT: "var(--popover)",
+              foreground: "var(--popover-foreground)",
+            },
+            primary: {
+              DEFAULT: "var(--primary)",
+              foreground: "var(--primary-foreground)",
+            },
+            secondary: {
+              DEFAULT: "var(--secondary)",
+              foreground: "var(--secondary-foreground)",
+            },
+            muted: {
+              DEFAULT: "var(--muted)",
+              foreground: "var(--muted-foreground)",
+            },
+            accent: {
+              DEFAULT: "var(--accent)",
+              foreground: "var(--accent-foreground)",
+            },
+            destructive: {
+              DEFAULT: "var(--destructive)",
+              foreground: "var(--destructive-foreground)",
+            },
+            border: "var(--border)",
+            input: "var(--input)",
+            ring: "var(--ring)",
+          },
+          fontFamily: {
+            sans: ["Inter", "system-ui", "sans-serif"],
+          },
+          animation: {
+            'pulse-soft': 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            'bounce-soft': 'bounce 1s ease-in-out',
+            'glow': 'glow 2s ease-in-out infinite alternate',
+          },
+          keyframes: {
+            glow: {
+              '0%': { boxShadow: '0 0 20px rgb(34 197 94 / 0.5)' },
+              '100%': { boxShadow: '0 0 40px rgb(34 197 94 / 0.8)' },
+            }
+          }
+        },
+      },
+    };
+    </script>
+    <style>
+    :root {
+      --background: hsl(222 84% 5%);
+      --foreground: hsl(210 40% 98%);
+      --card: hsl(217 33% 17%);
+      --card-foreground: hsl(210 40% 98%);
+      --popover: hsl(217 33% 17%);
+      --popover-foreground: hsl(210 40% 98%);
+      --primary: hsl(142 71% 45%);
+      --primary-foreground: hsl(356 29% 15%);
+      --secondary: hsl(217 33% 17%);
+      --secondary-foreground: hsl(210 40% 98%);
+      --muted: hsl(217 33% 17%);
+      --muted-foreground: hsl(215 20% 65%);
+      --accent: hsl(24 95% 53%);
+      --accent-foreground: hsl(60 9% 98%);
+      --destructive: hsl(0 63% 31%);
+      --destructive-foreground: hsl(210 40% 98%);
+      --border: hsl(217 33% 17%);
+      --input: hsl(217 33% 17%);
+      --ring: hsl(142 71% 45%);
+      --radius: 0.75rem;
+      --font-sans: 'Inter', system-ui, sans-serif;
+    }
+
+    .kush-button {
+      background: linear-gradient(135deg, #22C55E, #15803D);
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .kush-button:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 40px rgba(34, 197, 94, 0.6);
+    }
+
+    .kush-button:active {
+      transform: scale(0.95);
+    }
+
+    .click-animation {
+      animation: bounce-soft 0.3s ease-out;
+    }
+
+    .floating-text {
+      animation: float-up 1s ease-out forwards;
+    }
+
+    @keyframes float-up {
+      0% {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+      }
+      100% {
+        transform: translateY(-60px) scale(1.2);
+        opacity: 0;
+      }
+    }
+
+    .gradient-border {
+      background: linear-gradient(135deg, #22C55E, #F97316);
+      padding: 2px;
+      border-radius: 12px;
+    }
+
+    .gradient-border-inner {
+      background: var(--card);
+      border-radius: 10px;
+    }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-background text-foreground font-sans overflow-x-hidden">
+  <!-- @COMPONENT: GameContainer [main game wrapper with navigation] -->
+  <div class="min-h-screen bg-gradient-to-br from-slate-900 via-green-900/20 to-slate-900">
+    
+    <!-- Header Navigation -->
+    <!-- @COMPONENT: Header [navigation and wallet connection] -->
+    <header class="fixed top-0 left-0 right-0 z-50 bg-card/80 backdrop-blur-md border-b border-border">
+      <div class="container mx-auto px-4 py-3">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+              <i class="fas fa-cannabis text-primary-foreground text-xl"></i>
+            </div>
+            <div>
+              <h1 class="text-xl font-bold text-foreground">Kush Klicker</h1>
+              <p class="text-xs text-muted-foreground">Cannabis Mining Game</p>
+            </div>
+          </div>
+          
+          <div class="flex items-center space-x-3">
+            <div class="hidden md:flex items-center space-x-4 text-sm">
+              <a href="#" class="text-primary hover:text-primary/80 transition-colors">
+                <i class="fas fa-zap mr-1"></i> Features
+              </a>
+              <a href="#" class="text-accent hover:text-accent/80 transition-colors">
+                <i class="fas fa-gift mr-1"></i> Presale
+              </a>
+              <a href="#" class="text-foreground hover:text-primary transition-colors">
+                <i class="fas fa-trophy mr-1"></i> Leaderboard
+              </a>
+              <a href="#" class="text-muted-foreground hover:text-foreground transition-colors">
+                <i class="fas fa-question-circle mr-1"></i> Support
+              </a>
+              <a href="#" class="text-muted-foreground hover:text-foreground transition-colors">
+                <i class="fas fa-file-alt mr-1"></i> Whitepaper
+              </a>
+              <a href="#" class="text-muted-foreground hover:text-foreground transition-colors">
+                <i class="fas fa-road mr-1"></i> Roadmap
+              </a>
+            </div>
+            
+            <button id="connectWalletBtn" class="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center space-x-2">
+              <i class="fas fa-wallet"></i>
+              <span>Connect Wallet</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+    <!-- @END_COMPONENT: Header -->
+
+    <!-- Mobile Navigation -->
+    <!-- @COMPONENT: MobileNav [bottom navigation for mobile] -->
+    <nav id="mobileNav" class="fixed bottom-0 left-0 right-0 z-40 bg-card/95 backdrop-blur-md border-t border-border md:hidden">
+      <div class="flex items-center justify-around py-2">
+        <button class="nav-btn active" data-section="game">
+          <i class="fas fa-cannabis text-xl"></i>
+          <span class="text-xs">Mine</span>
+        </button>
+        <button class="nav-btn" data-section="upgrades">
+          <i class="fas fa-bolt text-xl"></i>
+          <span class="text-xs">Upgrades</span>
+        </button>
+        <button class="nav-btn" data-section="casino">
+          <i class="fas fa-dice text-xl"></i>
+          <span class="text-xs">Casino</span>
+        </button>
+        <button class="nav-btn" data-section="achievements">
+          <i class="fas fa-trophy text-xl"></i>
+          <span class="text-xs">Goals</span>
+        </button>
+        <button class="nav-btn" data-section="leaderboard">
+          <i class="fas fa-crown text-xl"></i>
+          <span class="text-xs">Leaders</span>
+        </button>
+        <button class="nav-btn" data-section="wallet">
+          <i class="fas fa-coins text-xl"></i>
+          <span class="text-xs">Wallet</span>
+        </button>
+        <button class="nav-btn" data-section="referral">
+          <i class="fas fa-users text-xl"></i>
+          <span class="text-xs">Referral</span>
+        </button>
+      </div>
+    </nav>
+    <!-- @END_COMPONENT: MobileNav -->
+
+    <!-- Desktop Navigation -->
+    <!-- @COMPONENT: DesktopNav [side navigation for desktop] -->
+    <nav id="desktopNav" class="hidden md:block fixed left-0 top-20 bottom-0 w-16 bg-card/80 backdrop-blur-md border-r border-border z-40">
+      <div class="flex flex-col items-center py-4 space-y-4">
+        <button class="nav-btn active" data-section="game">
+          <i class="fas fa-cannabis text-xl"></i>
+        </button>
+        <button class="nav-btn" data-section="upgrades">
+          <i class="fas fa-bolt text-xl"></i>
+        </button>
+        <button class="nav-btn" data-section="casino">
+          <i class="fas fa-dice text-xl"></i>
+        </button>
+        <button class="nav-btn" data-section="achievements">
+          <i class="fas fa-trophy text-xl"></i>
+        </button>
+        <button class="nav-btn" data-section="leaderboard">
+          <i class="fas fa-crown text-xl"></i>
+        </button>
+        <button class="nav-btn" data-section="wallet">
+          <i class="fas fa-coins text-xl"></i>
+        </button>
+        <button class="nav-btn" data-section="referral">
+          <i class="fas fa-users text-xl"></i>
+        </button>
+      </div>
+    </nav>
+    <!-- @END_COMPONENT: DesktopNav -->
+
+    <!-- Main Content Container -->
+    <main class="pt-20 pb-20 md:pb-4 md:pl-16 min-h-screen">
+      
+      <!-- Game Section -->
+      <!-- @COMPONENT: GameSection [main clicking interface] -->
+      <section id="gameSection" class="game-section active">
+        <div class="container mx-auto px-4 py-6 max-w-4xl">
+          
+          <!-- Hero Banner -->
+          <div class="bg-gradient-to-r from-primary/20 to-accent/20 rounded-xl p-4 mb-6 text-center border border-primary/30">
+            <div class="inline-flex items-center space-x-2 bg-primary text-primary-foreground px-3 py-1 rounded-full text-sm font-medium mb-2">
+              <i class="fas fa-broadcast-tower"></i>
+              <span>Now Live on Telegram</span>
+            </div>
+            <h2 class="text-2xl md:text-3xl font-bold text-foreground mb-2">
+              Mine Cannabis<br>
+              <span class="text-primary">Earn Real Crypto</span>
+            </h2>
+            <p class="text-muted-foreground text-sm md:text-base max-w-2xl mx-auto mb-4">
+              The ultimate incremental clicker game where every click grows your virtual cannabis empire and earns you real KUSH tokens on the Solana blockchain.
+            </p>
+            <div class="flex flex-wrap justify-center gap-3">
+              <button class="bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-2 rounded-lg font-medium transition-all duration-200 flex items-center space-x-2">
+                <i class="fas fa-play"></i>
+                <span>Play Kush Klicker</span>
+              </button>
+              <button class="bg-secondary hover:bg-secondary/90 text-secondary-foreground px-6 py-2 rounded-lg font-medium transition-all duration-200 flex items-center space-x-2">
+                <i class="fas fa-file-alt"></i>
+                <span>Read Whitepaper</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Stats Row -->
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div class="bg-card rounded-xl p-4 text-center border border-border">
+              <div class="flex items-center justify-center space-x-2 mb-2">
+                <i class="fas fa-cannabis text-primary"></i>
+                <span class="text-primary font-medium text-sm">Total Kush</span>
+              </div>
+              <div class="text-2xl font-bold text-foreground" data-bind="totalKush">29</div>
+            </div>
+            <div class="bg-card rounded-xl p-4 text-center border border-border">
+              <div class="flex items-center justify-center space-x-2 mb-2">
+                <i class="fas fa-hand-pointer text-accent"></i>
+                <span class="text-accent font-medium text-sm">Per Click</span>
+              </div>
+              <div class="text-2xl font-bold text-foreground" data-bind="perClick">2</div>
+            </div>
+            <div class="bg-card rounded-xl p-4 text-center border border-border">
+              <div class="flex items-center justify-center space-x-2 mb-2">
+                <i class="fas fa-clock text-yellow-500"></i>
+                <span class="text-yellow-500 font-medium text-sm">Per Hour</span>
+              </div>
+              <div class="text-2xl font-bold text-foreground" data-bind="perHour">0</div>
+            </div>
+            <div class="bg-card rounded-xl p-4 text-center border border-border">
+              <div class="flex items-center justify-center space-x-2 mb-2">
+                <i class="fas fa-robot text-blue-500"></i>
+                <span class="text-blue-500 font-medium text-sm">Auto Income</span>
+              </div>
+              <div class="text-2xl font-bold text-foreground" data-bind="autoIncome">0/hr</div>
+            </div>
+          </div>
+
+          <!-- Main Game Interface -->
+          <div class="text-center mb-8">
+            <!-- Floating Kush Counter -->
+            <div class="relative inline-block mb-4">
+              <div class="absolute -top-3 -right-3 bg-accent text-accent-foreground rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold animate-pulse-soft">
+                +2
+              </div>
+              
+              <!-- Main Kush Button -->
+              <button id="kushButton" class="kush-button w-48 h-48 md:w-64 md:h-64 rounded-full flex flex-col items-center justify-center text-white font-bold text-xl md:text-2xl shadow-2xl animate-glow relative overflow-hidden">
+                <i class="fas fa-cannabis text-4xl md:text-6xl mb-2"></i>
+                <span class="text-lg md:text-xl">KUSH</span>
+                <div id="clickAnimation" class="absolute inset-0 rounded-full bg-white/20 scale-0 transition-transform duration-300"></div>
+              </button>
+            </div>
+
+            <h3 class="text-xl font-semibold text-primary mb-2" data-mock="true">🌿 Kush Klicker</h3>
+            <p class="text-muted-foreground" data-mock="true">Click to earn = +2 KUSH</p>
+          </div>
+
+          <!-- Quick Stats Bar -->
+          <div class="bg-card rounded-xl p-4 border border-border">
+            <div class="flex items-center justify-between text-sm">
+              <span class="text-muted-foreground">Click to earn</span>
+              <span class="text-primary font-semibold">+2 KUSH</span>
+            </div>
+            <div class="w-full bg-muted rounded-full h-2 mt-2">
+              <div class="bg-primary h-2 rounded-full transition-all duration-300" style="width: 15%"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+      <!-- @END_COMPONENT: GameSection -->
+
+      <!-- Upgrades Section -->
+      <!-- @COMPONENT: UpgradesSection [upgrade shop interface] -->
+      <section id="upgradesSection" class="game-section hidden">
+        <div class="container mx-auto px-4 py-6 max-w-4xl">
+          <div class="flex items-center space-x-3 mb-6">
+            <i class="fas fa-seedling text-primary text-2xl"></i>
+            <h2 class="text-2xl font-bold text-foreground">Grow Your Operation</h2>
+          </div>
+
+          <div class="grid gap-4">
+            <!-- @MAP: upgrades.map(upgrade => ( -->
+            <div class="gradient-border">
+              <div class="gradient-border-inner p-4">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center space-x-4">
+                    <div class="w-12 h-12 bg-muted rounded-lg flex items-center justify-center">
+                      <i class="fas fa-hand-pointer text-primary"></i>
+                    </div>
+                    <div>
+                      <h3 class="font-semibold text-foreground" data-mock="true">Better Fingers</h3>
+                      <p class="text-muted-foreground text-sm" data-mock="true">+1 Kush per click</p>
+                    </div>
+                  </div>
+                  <div class="text-right">
+                    <div class="text-accent font-bold" data-mock="true">200K</div>
+                    <button class="bg-primary hover:bg-primary/90 text-primary-foreground px-3 py-1 rounded text-sm mt-1 transition-colors" data-event="click:purchaseUpgrade">
+                      TOO EXPENSIVE
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="gradient-border">
+              <div class="gradient-border-inner p-4">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center space-x-4">
+                    <div class="w-12 h-12 bg-muted rounded-lg flex items-center justify-center">
+                      <i class="fas fa-mouse-pointer text-yellow-500"></i>
+                    </div>
+                    <div>
+                      <h3 class="font-semibold text-foreground" data-mock="true">Auto Clicker</h3>
+                      <p class="text-muted-foreground text-sm" data-mock="true">+0.5 Kush per second</p>
+                    </div>
+                  </div>
+                  <div class="text-right">
+                    <div class="text-accent font-bold" data-mock="true">200K</div>
+                    <button class="bg-primary hover:bg-primary/90 text-primary-foreground px-3 py-1 rounded text-sm mt-1 transition-colors" data-event="click:purchaseUpgrade">
+                      TOO EXPENSIVE
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="gradient-border">
+              <div class="gradient-border-inner p-4">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center space-x-4">
+                    <div class="w-12 h-12 bg-muted rounded-lg flex items-center justify-center">
+                      <i class="fas fa-magic text-purple-500"></i>
+                    </div>
+                    <div>
+                      <h3 class="font-semibold text-foreground" data-mock="true">Lucky Fingers</h3>
+                      <p class="text-muted-foreground text-sm" data-mock="true">+2 Kush per click</p>
+                    </div>
+                  </div>
+                  <div class="text-right">
+                    <div class="text-accent font-bold" data-mock="true">200K</div>
+                    <button class="bg-primary hover:bg-primary/90 text-primary-foreground px-3 py-1 rounded text-sm mt-1 transition-colors" data-event="click:purchaseUpgrade">
+                      TOO EXPENSIVE
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="gradient-border">
+              <div class="gradient-border-inner p-4">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center space-x-4">
+                    <div class="w-12 h-12 bg-muted rounded-lg flex items-center justify-center">
+                      <i class="fas fa-gem text-yellow-400"></i>
+                    </div>
+                    <div>
+                      <h3 class="font-semibold text-foreground" data-mock="true">Golden Touch</h3>
+                      <p class="text-muted-foreground text-sm" data-mock="true">+5 Kush per click</p>
+                    </div>
+                  </div>
+                  <div class="text-right">
+                    <div class="text-accent font-bold" data-mock="true">3K</div>
+                    <button class="bg-primary hover:bg-primary/90 text-primary-foreground px-3 py-1 rounded text-sm mt-1 transition-colors" data-event="click:purchaseUpgrade">
+                      TOO EXPENSIVE
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="gradient-border">
+              <div class="gradient-border-inner p-4">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center space-x-4">
+                    <div class="w-12 h-12 bg-muted rounded-lg flex items-center justify-center">
+                      <i class="fas fa-seedling text-green-400"></i>
+                    </div>
+                    <div>
+                      <h3 class="font-semibold text-foreground" data-mock="true">Kush Farm</h3>
+                      <p class="text-muted-foreground text-sm" data-mock="true">+5 Kush per second</p>
+                    </div>
+                  </div>
+                  <div class="text-right">
+                    <div class="text-accent font-bold" data-mock="true">2K</div>
+                    <button class="bg-primary hover:bg-primary/90 text-primary-foreground px-3 py-1 rounded text-sm mt-1 transition-colors" data-event="click:purchaseUpgrade">
+                      TOO EXPENSIVE
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- @END_MAP )) -->
+          </div>
+        </div>
+      </section>
+      <!-- @END_COMPONENT: UpgradesSection -->
+
+      <!-- Casino Section -->
+      <!-- @COMPONENT: CasinoSection [gambling mini-games] -->
+      <section id="casinoSection" class="game-section hidden">
+        <div class="container mx-auto px-4 py-6 max-w-4xl">
+          <div class="flex items-center space-x-3 mb-6">
+            <i class="fas fa-dice text-accent text-2xl"></i>
+            <h2 class="text-2xl font-bold text-foreground">Multiplayer Hub</h2>
+          </div>
+
+          <!-- Tab Navigation -->
+          <div class="flex space-x-1 mb-6 bg-muted rounded-lg p-1">
+            <button class="casino-tab active flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors" data-tab="trading">
+              <i class="fas fa-exchange-alt mr-2"></i>Trading
+            </button>
+            <button class="casino-tab flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors" data-tab="staking">
+              <i class="fas fa-chart-line mr-2"></i>Staking
+            </button>
+            <button class="casino-tab flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors" data-tab="compete">
+              <i class="fas fa-trophy mr-2"></i>Compete
+            </button>
+          </div>
+
+          <!-- Trading System (Coming Soon) -->
+          <div id="tradingTab" class="casino-content">
+            <div class="bg-card rounded-xl p-8 text-center border border-border">
+              <i class="fas fa-shopping-cart text-4xl text-blue-400 mb-4"></i>
+              <h3 class="text-xl font-bold text-blue-400 mb-2">Trading System</h3>
+              <p class="text-muted-foreground mb-4">Coming Soon! Trade KUSH with other players</p>
+            </div>
+          </div>
+
+          <!-- Blackjack Casino -->
+          <div id="blackjackCasino" class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-border hidden">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-xl font-bold text-foreground flex items-center space-x-2">
+                <i class="fas fa-spade-suit text-white"></i>
+                <span>CANNABIS CASINO</span>
+              </h3>
+              <button class="text-muted-foreground hover:text-foreground">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+
+            <!-- Casino Games Grid -->
+            <div class="grid grid-cols-3 gap-4 mb-6">
+              <button class="bg-purple-600 hover:bg-purple-700 rounded-lg p-4 text-center transition-colors">
+                <i class="fas fa-spade-suit text-2xl mb-2"></i>
+                <div class="font-bold">Blackjack</div>
+                <div class="text-sm opacity-80">25%</div>
+              </button>
+              <button class="bg-red-600 hover:bg-red-700 rounded-lg p-4 text-center transition-colors">
+                <i class="fas fa-circle text-2xl mb-2"></i>
+                <div class="font-bold">Roulette</div>
+                <div class="text-sm opacity-80">20%</div>
+              </button>
+              <button class="bg-blue-600 hover:bg-blue-700 rounded-lg p-4 text-center transition-colors">
+                <i class="fas fa-coins text-2xl mb-2"></i>
+                <div class="font-bold">Coinflip</div>
+                <div class="text-sm opacity-80">50%</div>
+              </button>
+              <button class="bg-gray-600 hover:bg-gray-700 rounded-lg p-4 text-center transition-colors">
+                <i class="fas fa-dice text-2xl mb-2"></i>
+                <div class="font-bold">Dice</div>
+                <div class="text-sm opacity-80">50%</div>
+              </button>
+              <button class="bg-indigo-600 hover:bg-indigo-700 rounded-lg p-4 text-center transition-colors">
+                <i class="fas fa-chart-bar text-2xl mb-2"></i>
+                <div class="font-bold">Hi/Lo</div>
+                <div class="text-sm opacity-80">46%</div>
+              </button>
+            </div>
+
+            <!-- Betting Interface -->
+            <div class="text-center mb-4">
+              <div class="text-muted-foreground mb-2">Max: 7 Kush | Available: 29 Kush</div>
+              
+              <div class="flex justify-center space-x-2 mb-4">
+                <button class="bg-muted hover:bg-muted/80 text-muted-foreground px-4 py-2 rounded-lg">—</button>
+                <button class="bg-muted hover:bg-muted/80 text-muted-foreground px-4 py-2 rounded-lg">—</button>
+                <button class="bg-muted hover:bg-muted/80 text-muted-foreground px-4 py-2 rounded-lg">—</button>
+                <button class="bg-accent hover:bg-accent/90 text-accent-foreground px-4 py-2 rounded-lg font-bold">MAX</button>
+              </div>
+
+              <input type="text" placeholder="Custom amount" class="w-full bg-input border border-border rounded-lg px-4 py-2 mb-4 text-foreground">
+              
+              <button class="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-3 rounded-lg font-bold mb-4 transition-colors" data-event="click:playBlackjack">
+                <i class="fas fa-play-circle mr-2"></i>PLAY BLACKJACK
+              </button>
+
+              <div class="bg-destructive/20 border border-destructive/50 rounded-lg p-3">
+                <i class="fas fa-exclamation-triangle text-destructive mr-2"></i>
+                <span class="text-destructive text-sm">Warning: House has advantage. Gamble responsibly!</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      <!-- @END_COMPONENT: CasinoSection -->
+
+      <!-- Achievements Section -->
+      <!-- @COMPONENT: AchievementsSection [goals and progress tracking] -->
+      <section id="achievementsSection" class="game-section hidden">
+        <div class="container mx-auto px-4 py-6 max-w-4xl">
+          <div class="flex items-center space-x-3 mb-6">
+            <i class="fas fa-trophy text-primary text-2xl"></i>
+            <h2 class="text-2xl font-bold text-foreground">Achievements (100)</h2>
+          </div>
+
+          <!-- Achievement Stats -->
+          <div class="grid grid-cols-3 gap-4 mb-6">
+            <div class="bg-card rounded-xl p-4 text-center border border-border">
+              <div class="text-2xl font-bold text-primary">9</div>
+              <div class="text-muted-foreground text-sm">Completed</div>
+            </div>
+            <div class="bg-card rounded-xl p-4 text-center border border-border">
+              <div class="text-2xl font-bold text-accent">1</div>
+              <div class="text-muted-foreground text-sm">In Progress</div>
+            </div>
+            <div class="bg-card rounded-xl p-4 text-center border border-border">
+              <div class="text-2xl font-bold text-muted-foreground">42</div>
+              <div class="text-muted-foreground text-sm">Locked</div>
+            </div>
+          </div>
+
+          <!-- Achievement List -->
+          <div class="space-y-4">
+            <!-- @MAP: achievements.map(achievement => ( -->
+            <div class="bg-card rounded-xl p-4 border border-primary/50">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                  <div class="w-12 h-12 bg-primary rounded-lg flex items-center justify-center">
+                    <i class="fas fa-cannabis text-primary-foreground"></i>
+                  </div>
+                  <div>
+                    <h3 class="font-semibold text-foreground" data-mock="true">Collect 5 KUSH</h3>
+                    <div class="text-xs text-muted-foreground mb-1">5 / 5 totalKush</div>
+                    <div class="w-48 bg-muted rounded-full h-2">
+                      <div class="bg-primary h-2 rounded-full" style="width: 100%"></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="bg-primary text-primary-foreground px-3 py-1 rounded-full text-sm font-bold">
+                  ✓ COMPLETED
+                </div>
+              </div>
+            </div>
+
+            <div class="bg-card rounded-xl p-4 border border-primary/50">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                  <div class="w-12 h-12 bg-primary rounded-lg flex items-center justify-center">
+                    <i class="fas fa-thumbs-up text-primary-foreground"></i>
+                  </div>
+                  <div>
+                    <h3 class="font-semibold text-foreground" data-mock="true">Green Thumb</h3>
+                    <div class="text-xs text-muted-foreground mb-1">25 / 25 totalKush</div>
+                    <div class="w-48 bg-muted rounded-full h-2">
+                      <div class="bg-primary h-2 rounded-full" style="width: 100%"></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="bg-primary text-primary-foreground px-3 py-1 rounded-full text-sm font-bold">
+                  ✓ COMPLETED
+                </div>
+              </div>
+            </div>
+
+            <div class="bg-card rounded-xl p-4 border border-accent/50">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                  <div class="w-12 h-12 bg-accent rounded-lg flex items-center justify-center">
+                    <i class="fas fa-tachometer-alt text-accent-foreground"></i>
+                  </div>
+                  <div>
+                    <h3 class="font-semibold text-foreground" data-mock="true">Speed Demon</h3>
+                    <div class="text-xs text-muted-foreground mb-1">176 / 250 clicks</div>
+                    <div class="w-48 bg-muted rounded-full h-2">
+                      <div class="bg-accent h-2 rounded-full" style="width: 70%"></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="bg-accent text-accent-foreground px-3 py-1 rounded-full text-sm font-bold">
+                  ⚡ PROGRESS
+                </div>
+              </div>
+            </div>
+
+            <div class="bg-card rounded-xl p-4 border border-muted">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                  <div class="w-12 h-12 bg-muted rounded-lg flex items-center justify-center">
+                    <i class="fas fa-coins text-muted-foreground"></i>
+                  </div>
+                  <div>
+                    <h3 class="font-semibold text-muted-foreground" data-mock="true">Kush Collector</h3>
+                    <div class="text-xs text-muted-foreground mb-1">29 / 1,000 totalKush</div>
+                    <div class="w-48 bg-muted rounded-full h-2">
+                      <div class="bg-muted-foreground h-2 rounded-full" style="width: 3%"></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="bg-muted text-muted-foreground px-3 py-1 rounded-full text-sm font-bold">
+                  🔒 LOCKED
+                </div>
+              </div>
+            </div>
+            <!-- @END_MAP )) -->
+          </div>
+
+          <div class="mt-6 text-center">
+            <i class="fas fa-trophy text-primary mr-2"></i>
+            <span class="text-muted-foreground text-sm">Complete achievements to earn KUSH tokens and boost your progress!</span>
+          </div>
+        </div>
+      </section>
+      <!-- @END_COMPONENT: AchievementsSection -->
+
+      <!-- Leaderboard Section -->
+      <!-- @COMPONENT: LeaderboardSection [player rankings] -->
+      <section id="leaderboardSection" class="game-section hidden">
+        <div class="container mx-auto px-4 py-6 max-w-4xl">
+          <div class="flex items-center space-x-3 mb-6">
+            <i class="fas fa-trophy text-primary text-2xl"></i>
+            <h2 class="text-2xl font-bold text-foreground">Leaderboard</h2>
+          </div>
+
+          <div class="bg-card rounded-xl border border-border overflow-hidden">
+            <div class="bg-gradient-to-r from-yellow-600 to-yellow-500 p-4 text-center">
+              <i class="fas fa-trophy text-yellow-100 text-xl mr-2"></i>
+              <span class="text-yellow-100 font-bold">TOP PLAYERS</span>
+              <i class="fas fa-trophy text-yellow-100 text-xl ml-2"></i>
+            </div>
+            
+            <div class="p-4">
+              <div class="text-center text-primary font-medium text-sm mb-4">Elite Kush Masters</div>
+              
+              <!-- @MAP: leaderboard.map((player, index) => ( -->
+              <div class="gradient-border mb-3">
+                <div class="gradient-border-inner p-4">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                      <div class="w-10 h-10 bg-yellow-500 rounded-full flex items-center justify-center">
+                        <span class="text-yellow-900 font-bold text-sm" data-mock="true">@</span>
+                      </div>
+                      <div>
+                        <div class="font-semibold text-foreground" data-mock="true">@Comet</div>
+                        <div class="text-xs text-muted-foreground">
+                          <i class="fas fa-mouse-pointer mr-1"></i>
+                          <span data-mock="true">1,532 clicks</span>
+                          <span class="bg-red-600 text-white px-2 py-0.5 rounded-full ml-2 text-xs">🔥 LEGENDARY</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="text-right">
+                      <div class="text-xl font-bold text-yellow-400" data-mock="true">1,469.4</div>
+                      <div class="text-xs text-primary flex items-center">
+                        <i class="fas fa-cannabis mr-1"></i>
+                        <span data-mock="true">TOTAL KUSH</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="gradient-border mb-3">
+                <div class="gradient-border-inner p-4">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                      <div class="w-10 h-10 bg-gray-400 rounded-full flex items-center justify-center">
+                        <span class="text-gray-800 font-bold text-sm" data-mock="true">@</span>
+                      </div>
+                      <div>
+                        <div class="font-semibold text-foreground" data-mock="true">@walsh</div>
+                        <div class="text-xs text-muted-foreground">
+                          <i class="fas fa-mouse-pointer mr-1"></i>
+                          <span data-mock="true">176 clicks</span>
+                          <span class="bg-blue-600 text-white px-2 py-0.5 rounded-full ml-2 text-xs">📈 GROWING</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="text-right">
+                      <div class="text-xl font-bold text-foreground" data-mock="true">29.4</div>
+                      <div class="text-xs text-primary flex items-center">
+                        <i class="fas fa-cannabis mr-1"></i>
+                        <span data-mock="true">TOTAL KUSH</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="gradient-border">
+                <div class="gradient-border-inner p-4">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                      <div class="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center">
+                        <span class="text-orange-100 font-bold text-sm" data-mock="true">@</span>
+                      </div>
+                      <div>
+                        <div class="font-semibold text-foreground" data-mock="true">@GroupAnonymousBot</div>
+                        <div class="text-xs text-muted-foreground">
+                          <i class="fas fa-mouse-pointer mr-1"></i>
+                          <span data-mock="true">0 clicks</span>
+                          <span class="bg-blue-600 text-white px-2 py-0.5 rounded-full ml-2 text-xs">📈 GROWING</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="text-right">
+                      <div class="text-xl font-bold text-accent" data-mock="true">0</div>
+                      <div class="text-xs text-primary flex items-center">
+                        <i class="fas fa-cannabis mr-1"></i>
+                        <span data-mock="true">TOTAL KUSH</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <!-- @END_MAP )) -->
+            </div>
+
+            <div class="bg-primary/10 p-4 text-center border-t border-border">
+              <div class="text-primary text-sm">
+                <i class="fas fa-bolt mr-1"></i>
+                Live Rankings • Updated Real-time • Climb to Glory!
+                <i class="fas fa-bolt ml-1"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      <!-- @END_COMPONENT: LeaderboardSection -->
+
+      <!-- Wallet Section -->
+      <!-- @COMPONENT: WalletSection [Solana wallet integration] -->
+      <section id="walletSection" class="game-section hidden">
+        <div class="container mx-auto px-4 py-6 max-w-4xl">
+          <div class="flex items-center space-x-3 mb-6">
+            <i class="fas fa-wallet text-blue-400 text-2xl"></i>
+            <h2 class="text-2xl font-bold text-foreground">Solana Wallet</h2>
+          </div>
+
+          <!-- Wallet Balance Card -->
+          <div class="bg-gradient-to-br from-blue-900/50 to-purple-900/50 rounded-xl p-6 border border-blue-500/30 mb-6">
+            <div class="text-center">
+              <div class="text-3xl font-bold text-foreground mb-2" data-bind="claimableTokens">0 KUSH</div>
+              <div class="text-blue-400 text-sm mb-4">Claimable Tokens ($0.0000 USD)</div>
+              
+              <div class="bg-blue-600/20 rounded-lg p-3 mb-4 border border-blue-500/30">
+                <i class="fas fa-info-circle text-blue-400 mr-2"></i>
+                <span class="text-blue-400 text-sm">Conversion Rate: 1,000 KUSH = 1 Real SOL Token</span>
+                <div class="text-xs text-muted-foreground mt-1">Current game balance: 29 KUSH</div>
+              </div>
+
+              <button class="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white py-3 rounded-lg font-bold mb-4 transition-all duration-200" data-event="click:connectSolanaWallet">
+                Connect Solana Wallet
+              </button>
+
+              <p class="text-muted-foreground text-sm">Connect your wallet to prepare for token withdrawal</p>
+            </div>
+          </div>
+
+          <!-- Game Launch Status -->
+          <div class="bg-accent/20 border border-accent/50 rounded-lg p-4 mb-4">
+            <div class="flex items-start space-x-3">
+              <i class="fas fa-rocket text-accent text-lg mt-0.5"></i>
+              <div>
+                <h4 class="font-semibold text-accent mb-1">Game Launch Status</h4>
+                <p class="text-sm text-foreground">Real Solana token integration is coming soon! Your claimable tokens will be converted to real SOL when the game officially launches.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Network Warning -->
+          <div class="bg-destructive/20 border border-destructive/50 rounded-lg p-4">
+            <div class="flex items-start space-x-3">
+              <i class="fas fa-exclamation-triangle text-destructive text-lg mt-0.5"></i>
+              <div>
+                <h4 class="font-semibold text-destructive mb-2">⚠️ IMPORTANT: Solana Network Only</h4>
+                <ul class="text-sm text-foreground space-y-1">
+                  <li>• Only send tokens on the <strong>Solana</strong> network</li>
+                  <li>• Do NOT send tokens from other networks (Ethereum, BSC, etc.)</li>
+                  <li>• Sending from wrong networks will result in permanent loss</li>
+                  <li>• Always verify the network before making any transactions</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div class="text-center mt-6">
+            <button class="bg-muted hover:bg-muted/80 text-muted-foreground px-6 py-2 rounded-lg transition-colors" data-event="click:refreshBalance">
+              Refresh Balance
+            </button>
+          </div>
+        </div>
+      </section>
+      <!-- @END_COMPONENT: WalletSection -->
+
+      <!-- Referral Section -->
+      <!-- @COMPONENT: ReferralSection [referral system interface] -->
+      <section id="referralSection" class="game-section hidden">
+        <div class="container mx-auto px-4 py-6 max-w-4xl">
+          <div class="flex items-center space-x-3 mb-6">
+            <i class="fas fa-users text-pink-500 text-2xl"></i>
+            <h2 class="text-2xl font-bold text-foreground">Referral System</h2>
+          </div>
+
+          <!-- Referral Stats -->
+          <div class="grid grid-cols-2 gap-4 mb-6">
+            <div class="bg-card rounded-xl p-6 text-center border border-border">
+              <i class="fas fa-gift text-4xl text-accent mb-3"></i>
+              <div class="text-2xl font-bold text-foreground" data-bind="totalReferrals">0</div>
+              <div class="text-muted-foreground text-sm">Total Referrals</div>
+            </div>
+            <div class="bg-card rounded-xl p-6 text-center border border-border">
+              <i class="fas fa-coins text-4xl text-primary mb-3"></i>
+              <div class="text-2xl font-bold text-foreground" data-bind="referralRewards">0 KUSH</div>
+              <div class="text-muted-foreground text-sm">Referral Rewards</div>
+            </div>
+          </div>
+
+          <!-- Referral Username -->
+          <div class="bg-card rounded-xl p-6 border border-border mb-6">
+            <div class="flex items-center space-x-2 mb-3">
+              <i class="fas fa-user text-purple-500"></i>
+              <h3 class="font-semibold text-purple-500">Your Referral Username</h3>
+            </div>
+            
+            <div class="bg-muted rounded-lg p-4 mb-4">
+              <div class="text-foreground font-mono text-lg" data-mock="true" data-bind="referralUsername">@walsh</div>
+            </div>
+            
+            <p class="text-muted-foreground text-sm mb-4">Friends can enter your username when they join!</p>
+            
+            <button class="w-full bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white py-3 rounded-lg font-bold transition-all duration-200" data-event="click:copyUsername">
+              <i class="fas fa-copy mr-2"></i>Copy Username
+            </button>
+          </div>
+
+          <!-- How Referrals Work -->
+          <div class="bg-card rounded-xl p-6 border border-border mb-6">
+            <div class="flex items-center space-x-2 mb-4">
+              <i class="fas fa-question-circle text-destructive"></i>
+              <h3 class="font-semibold text-destructive">How Referrals Work</h3>
+            </div>
+            
+            <div class="space-y-4">
+              <div class="flex items-start space-x-3">
+                <div class="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold">1</div>
+                <div>
+                  <h4 class="font-semibold text-foreground">Share Your Username</h4>
+                  <p class="text-muted-foreground text-sm">Tell friends your Telegram username</p>
+                </div>
+              </div>
+              
+              <div class="flex items-start space-x-3">
+                <div class="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold">2</div>
+                <div>
+                  <h4 class="font-semibold text-foreground">They Enter Your Username</h4>
+                  <p class="text-muted-foreground text-sm">Friends use the /invite command with your username</p>
+                </div>
+              </div>
+              
+              <div class="flex items-start space-x-3">
+                <div class="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold">3</div>
+                <div>
+                  <h4 class="font-semibold text-foreground">Earn Rewards</h4>
+                  <p class="text-muted-foreground text-sm">Get bonus KUSH for each active referral</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Your Referrals -->
+          <div class="bg-card rounded-xl p-6 border border-border">
+            <div class="flex items-center space-x-2 mb-4">
+              <i class="fas fa-address-book text-primary"></i>
+              <h3 class="font-semibold text-primary">Your Referrals</h3>
+            </div>
+            
+            <div class="text-center py-8">
+              <i class="fas fa-users text-4xl text-muted-foreground mb-3"></i>
+              <p class="text-muted-foreground">No referrals yet!</p>
+            </div>
+          </div>
+        </div>
+      </section>
+      <!-- @END_COMPONENT: ReferralSection -->
+
+    </main>
+
+    <!-- Floating Click Effects Container -->
+    <div id="clickEffects" class="fixed inset-0 pointer-events-none z-30"></div>
+
+    <!-- Casino Modal -->
+    <!-- @COMPONENT: CasinoModal [blackjack game interface] -->
+    <div id="casinoModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+      <div class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl max-w-lg w-full border border-border">
+        <div class="flex items-center justify-between p-6 border-b border-border">
+          <h3 class="text-xl font-bold text-foreground flex items-center space-x-2">
+            <i class="fas fa-spade-suit text-white"></i>
+            <span>CANNABIS CASINO</span>
+          </h3>
+          <button id="closeCasino" class="text-muted-foreground hover:text-foreground transition-colors">
+            <i class="fas fa-times text-xl"></i>
+          </button>
+        </div>
+
+        <div class="p-6">
+          <!-- Casino Games Grid -->
+          <div class="grid grid-cols-3 gap-3 mb-6">
+            <button class="bg-purple-600 hover:bg-purple-700 rounded-lg p-3 text-center transition-colors text-white">
+              <i class="fas fa-spade-suit text-xl mb-1"></i>
+              <div class="font-bold text-sm">Blackjack</div>
+              <div class="text-xs opacity-80">25%</div>
+            </button>
+            <button class="bg-red-600 hover:bg-red-700 rounded-lg p-3 text-center transition-colors text-white">
+              <i class="fas fa-circle text-xl mb-1"></i>
+              <div class="font-bold text-sm">Roulette</div>
+              <div class="text-xs opacity-80">20%</div>
+            </button>
+            <button class="bg-blue-600 hover:bg-blue-700 rounded-lg p-3 text-center transition-colors text-white">
+              <i class="fas fa-coins text-xl mb-1"></i>
+              <div class="font-bold text-sm">Coinflip</div>
+              <div class="text-xs opacity-80">50%</div>
+            </button>
+            <button class="bg-gray-600 hover:bg-gray-700 rounded-lg p-3 text-center transition-colors text-white">
+              <i class="fas fa-dice text-xl mb-1"></i>
+              <div class="font-bold text-sm">Dice</div>
+              <div class="text-xs opacity-80">50%</div>
+            </button>
+            <button class="bg-indigo-600 hover:bg-indigo-700 rounded-lg p-3 text-center transition-colors text-white">
+              <i class="fas fa-chart-bar text-xl mb-1"></i>
+              <div class="font-bold text-sm">Hi/Lo</div>
+              <div class="text-xs opacity-80">46%</div>
+            </button>
+          </div>
+
+          <!-- Betting Interface -->
+          <div class="text-center">
+            <div class="text-muted-foreground text-sm mb-3">Max: 7 Kush | Available: 29 Kush</div>
+            
+            <div class="flex justify-center space-x-2 mb-4">
+              <button class="bg-muted hover:bg-muted/80 text-muted-foreground px-3 py-2 rounded-lg text-sm">—</button>
+              <button class="bg-muted hover:bg-muted/80 text-muted-foreground px-3 py-2 rounded-lg text-sm">—</button>
+              <button class="bg-muted hover:bg-muted/80 text-muted-foreground px-3 py-2 rounded-lg text-sm">—</button>
+              <button class="bg-accent hover:bg-accent/90 text-accent-foreground px-3 py-2 rounded-lg text-sm font-bold">MAX</button>
+            </div>
+
+            <input type="text" placeholder="Custom amount" class="w-full bg-input border border-border rounded-lg px-4 py-2 mb-4 text-foreground text-center">
+            
+            <button class="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-3 rounded-lg font-bold mb-4 transition-colors" data-event="click:playBlackjack">
+              <i class="fas fa-play-circle mr-2"></i>PLAY BLACKJACK
+            </button>
+
+            <div class="bg-destructive/20 border border-destructive/50 rounded-lg p-3 mb-4">
+              <i class="fas fa-exclamation-triangle text-destructive mr-2"></i>
+              <span class="text-destructive text-sm">Warning: House has advantage. Gamble responsibly!</span>
+            </div>
+
+            <button class="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-2 rounded-lg font-medium transition-colors">
+              <i class="fas fa-external-link-alt mr-2"></i>Open Casino Games
+            </button>
+            
+            <div class="text-xs text-muted-foreground mt-2">Max bet: 7 Kush (25% of total)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- @END_COMPONENT: CasinoModal -->
+
+  </div>
+
+  <script>
+  (function() {
+    // Game State
+    let gameState = {
+      totalKush: 29,
+      perClick: 2,
+      perHour: 0,
+      autoIncome: 0,
+      claimableTokens: 0
+    };
+
+    // Load game state from localStorage
+    function loadGameState() {
+      const saved = localStorage.getItem('kushKlickerState');
+      if (saved) {
+        gameState = { ...gameState, ...JSON.parse(saved) };
+        updateDisplay();
+      }
+    }
+
+    // Save game state to localStorage
+    function saveGameState() {
+      localStorage.setItem('kushKlickerState', JSON.stringify(gameState));
+    }
+
+    // Update display elements
+    function updateDisplay() {
+      const elements = {
+        '[data-bind="totalKush"]': gameState.totalKush,
+        '[data-bind="perClick"]': gameState.perClick,
+        '[data-bind="perHour"]': gameState.perHour,
+        '[data-bind="autoIncome"]': gameState.autoIncome + '/hr',
+        '[data-bind="claimableTokens"]': gameState.claimableTokens + ' KUSH'
+      };
+
+      Object.entries(elements).forEach(([selector, value]) => {
+        document.querySelectorAll(selector).forEach(el => {
+          el.textContent = value;
+        });
+      });
+    }
+
+    // Navigation system
+    function initNavigation() {
+      const navButtons = document.querySelectorAll('.nav-btn');
+      const sections = document.querySelectorAll('.game-section');
+
+      navButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const targetSection = btn.dataset.section;
+          
+          // Update button states
+          navButtons.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          
+          // Show target section
+          sections.forEach(section => {
+            section.classList.add('hidden');
+            section.classList.remove('active');
+          });
+          
+          const target = document.getElementById(targetSection + 'Section');
+          if (target) {
+            target.classList.remove('hidden');
+            target.classList.add('active');
+          }
+        });
+      });
+    }
+
+    // Click mechanics
+    function initClickMechanics() {
+      const kushButton = document.getElementById('kushButton');
+      const clickAnimation = document.getElementById('clickAnimation');
+      const clickEffects = document.getElementById('clickEffects');
+
+      kushButton.addEventListener('click', (e) => {
+        // Update game state
+        gameState.totalKush += gameState.perClick;
+        updateDisplay();
+        saveGameState();
+
+        // Button animation
+        kushButton.classList.add('click-animation');
+        setTimeout(() => kushButton.classList.remove('click-animation'), 300);
+
+        // Click ripple effect
+        clickAnimation.classList.add('scale-100');
+        setTimeout(() => clickAnimation.classList.remove('scale-100'), 300);
+
+        // Floating text effect
+        const rect = kushButton.getBoundingClientRect();
+        const floatingText = document.createElement('div');
+        floatingText.className = 'floating-text fixed text-primary font-bold text-xl pointer-events-none z-40';
+        floatingText.textContent = '+' + gameState.perClick;
+        floatingText.style.left = (rect.left + rect.width / 2 - 15) + 'px';
+        floatingText.style.top = (rect.top + rect.height / 2 - 10) + 'px';
+        
+        clickEffects.appendChild(floatingText);
+        setTimeout(() => {
+          if (floatingText.parentNode) {
+            floatingText.parentNode.removeChild(floatingText);
+          }
+        }, 1000);
+      });
+    }
+
+    // Casino modal
+    function initCasinoModal() {
+      const casinoModal = document.getElementById('casinoModal');
+      const closeCasino = document.getElementById('closeCasino');
+      
+      // Open casino from navigation
+      document.addEventListener('click', (e) => {
+        if (e.target.closest('[data-section="casino"]')) {
+          casinoModal.classList.remove('hidden');
+          casinoModal.classList.add('flex');
+        }
+      });
+
+      // Close casino
+      closeCasino.addEventListener('click', () => {
+        casinoModal.classList.add('hidden');
+        casinoModal.classList.remove('flex');
+      });
+
+      // Close on backdrop click
+      casinoModal.addEventListener('click', (e) => {
+        if (e.target === casinoModal) {
+          casinoModal.classList.add('hidden');
+          casinoModal.classList.remove('flex');
+        }
+      });
+    }
+
+    // Tab system for casino
+    function initTabSystem() {
+      document.addEventListener('click', (e) => {
+        if (e.target.closest('.casino-tab')) {
+          const tab = e.target.closest('.casino-tab');
+          const tabName = tab.dataset.tab;
+          
+          // Update tab states
+          document.querySelectorAll('.casino-tab').forEach(t => {
+            t.classList.remove('active', 'bg-primary', 'text-primary-foreground');
+            t.classList.add('text-muted-foreground');
+          });
+          
+          tab.classList.add('active', 'bg-primary', 'text-primary-foreground');
+          tab.classList.remove('text-muted-foreground');
+        }
+      });
+    }
+
+    // Wallet connection simulation
+    function initWalletConnection() {
+      const connectBtn = document.getElementById('connectWalletBtn');
+      
+      connectBtn.addEventListener('click', () => {
+        // TODO: Implement actual Solana wallet connection using @solana/web3.js and wallet adapters
+        console.log('Connecting to Solana wallet...');
+        
+        // Simulate connection process
+        connectBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Connecting...';
+        connectBtn.disabled = true;
+        
+        setTimeout(() => {
+          connectBtn.innerHTML = '<i class="fas fa-check mr-2"></i>Connected';
+          connectBtn.classList.remove('bg-primary');
+          connectBtn.classList.add('bg-green-600');
+        }, 2000);
+      });
+    }
+
+    // Auto-income simulation
+    function startAutoIncome() {
+      setInterval(() => {
+        if (gameState.autoIncome > 0) {
+          gameState.totalKush += gameState.autoIncome / 3600; // Per second
+          updateDisplay();
+          saveGameState();
+        }
+      }, 1000);
+    }
+
+    // Initialize everything
+    document.addEventListener('DOMContentLoaded', () => {
+      loadGameState();
+      initNavigation();
+      initClickMechanics();
+      initCasinoModal();
+      initTabSystem();
+      initWalletConnection();
+      startAutoIncome();
+      
+      // Add navigation button styles
+      const style = document.createElement('style');
+      style.textContent = `
+        .nav-btn {
+          @apply flex flex-col items-center justify-center space-y-1 p-2 rounded-lg text-muted-foreground transition-all duration-200 hover:text-primary hover:bg-primary/10;
+        }
+        .nav-btn.active {
+          @apply text-primary bg-primary/20;
+        }
+        .nav-btn span {
+          @apply font-medium;
+        }
+      `;
+      document.head.appendChild(style);
+    });
+
+    // @STATE: gameState:object = { totalKush: 29, perClick: 2, perHour: 0, autoIncome: 0, claimableTokens: 0 }
+    // @STATE: currentSection:string = 'game'
+    // @STATE: walletConnected:boolean = false
+
+  })();
+  </script>
+</body>
+</html>

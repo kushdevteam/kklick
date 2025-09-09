@@ -1,0 +1,102 @@
+er
+📝 Process ID 39 written to /tmp/kushklicker-server.pid
+2025-09-03 03:17:33.33
+b2ff48b3
+User
+🔍 Checking port 5000 availability...
+2025-09-03 03:17:33.33
+b2ff48b3
+User
+✅ Port 5000 is available
+2025-09-03 03:17:33.46
+b2ff48b3
+User
+2:17:33 AM [express] 🚀 Server with WebSocket support running on port 5000
+2025-09-03 03:17:33.46
+b2ff48b3
+User
+🪙 Initializing mainnet token service...
+2025-09-03 03:17:33.46
+b2ff48b3
+User
+🚀 Initializing Real Token Service on mainnet
+2025-09-03 03:17:33.46
+b2ff48b3
+User
+✅ Using production token: FPdBJCFaSqwrh4qQLezZgoVCLDvXkuFm5tR95TkXDZGBVYUtqCUL
+2025-09-03 03:17:33.46
+b2ff48b3
+User
+🔗 Network: mainnet (https://api.mainnet-beta.solana.com)
+2025-09-03 03:17:33.46
+b2ff48b3
+User
+🔍 Validating token mint address: "FPdBJCFaSqwrh4qQLezZgoVCLDvXkuFm5tR95TkXDZGBVYUtqCUL"
+2025-09-03 03:17:33.46
+b2ff48b3
+User
+📏 Address length: 52
+2025-09-03 03:17:33.46
+b2ff48b3
+User
+✅ Validation result: true
+2025-09-03 03:17:33.46
+b2ff48b3
+User
+💰 Balance checking enabled for token: FPdBJCFaSqwrh4qQLezZgoVCLDvXkuFm5tR95TkXDZGBVYUtqCUL
+2025-09-03 03:17:33.46
+b2ff48b3
+User
+✅ Mainnet token service ready for rewards!
+2025-09-03 03:17:33.47
+b2ff48b3
+User
+🤖 Initializing Telegram bot with enhanced conflict prevention...
+2025-09-03 03:17:33.47
+b2ff48b3
+User
+🔗 Setting up Telegram webhook: b2ff48b3-0473-4f63-9398-1867777e4318-00-1zk7o7czt51b9.riker.replit.dev/webhook/7837565817:AAGmAFWpFVBfqLbzb3Cf7uGy52F4_Q7u7BI
+2025-09-03 03:17:33.48
+b2ff48b3
+User
+🤖 Telegram bot started successfully!
+2025-09-03 03:17:33.48
+b2ff48b3
+User
+🔔 Initializing KushNotifyBot with enhanced conflict prevention...
+2025-09-03 03:17:33.48
+b2ff48b3
+User
+🔔 KushNotifyBot started successfully!
+2025-09-03 03:17:33.77
+b2ff48b3
+User
+Discord bot starting...
+2025-09-03 03:17:33.79
+b2ff48b3
+User
+💥 Unhandled Rejection at: Promise {
+2025-09-03 03:17:33.79
+b2ff48b3
+User
+Error: listen EADDRINUSE: address already in use 0.0.0.0:5000
+2025-09-03 03:17:33.79
+b2ff48b3
+User
+at Server.setupListenHandle [as _listen2] (node:net:1908:16)
+2025-09-03 03:17:33.79
+b2ff48b3
+User
+at listenInCluster (node:net:1965:12)
+2025-09-03 03:17:33.79
+b2ff48b3
+User
+at doListen (node:net:2139:7)
+2025-09-03 03:17:33.79
+b2ff48b3
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:83:21) {
+2025-09-03 03:17:33.79
+b2ff48b3
+User
+code: 'EADDRINUSE',

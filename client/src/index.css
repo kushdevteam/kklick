@@ -1,0 +1,889 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Dark green cannabis theme matching logo */
+  --background: hsl(158, 64%, 4%);
+  --foreground: hsl(120, 17%, 95%);
+  --card: hsl(158, 27%, 8%);
+  --card-foreground: hsl(120, 17%, 95%);
+  --popover: hsl(158, 27%, 8%);
+  --popover-foreground: hsl(120, 17%, 95%);
+  --primary: hsl(120, 75%, 40%); /* Bright green like logo */
+  --primary-foreground: hsl(158, 64%, 4%);
+  --secondary: hsl(158, 27%, 8%);
+  --secondary-foreground: hsl(120, 17%, 95%);
+  --muted: hsl(158, 27%, 8%);
+  --muted-foreground: hsl(120, 10%, 65%);
+  --accent: hsl(75, 85%, 60%); /* Lime green accent */
+  --accent-foreground: hsl(158, 64%, 4%);
+  --destructive: hsl(0, 63%, 31%);
+  --destructive-foreground: hsl(120, 17%, 95%);
+  --border: hsl(158, 27%, 12%);
+  --input: hsl(158, 27%, 8%);
+  --ring: hsl(120, 75%, 40%);
+  --radius: 0.75rem;
+  --font-sans: 'Inter', system-ui, sans-serif;
+}
+
+.dark {
+  --background: hsl(222, 84%, 5%);
+  --foreground: hsl(210, 40%, 98%);
+  --card: hsl(217, 33%, 17%);
+  --card-foreground: hsl(210, 40%, 98%);
+  --popover: hsl(217, 33%, 17%);
+  --popover-foreground: hsl(210, 40%, 98%);
+  --primary: hsl(142, 71%, 45%);
+  --primary-foreground: hsl(356, 29%, 15%);
+  --secondary: hsl(217, 33%, 17%);
+  --secondary-foreground: hsl(210, 40%, 98%);
+  --muted: hsl(217, 33%, 17%);
+  --muted-foreground: hsl(215, 20%, 65%);
+  --accent: hsl(24, 95%, 53%);
+  --accent-foreground: hsl(60, 9%, 98%);
+  --destructive: hsl(0, 63%, 31%);
+  --destructive-foreground: hsl(210, 40%, 98%);
+  --border: hsl(217, 33%, 17%);
+  --input: hsl(217, 33%, 17%);
+  --ring: hsl(142, 71%, 45%);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+    /* Fix scrolling in Telegram WebApp */
+    overflow-y: auto !important;
+    height: auto !important;
+    min-height: 100vh;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    /* Ensure proper scrolling in all contexts */
+    overflow-y: auto !important;
+    height: auto !important;
+  }
+
+  /* Telegram WebApp specific fixes */
+  .tg-viewport {
+    overflow-y: auto !important;
+    height: auto !important;
+  }
+
+  /* Ensure container can scroll */
+  #root {
+    overflow-y: auto !important;
+    height: auto !important;
+    min-height: 100vh;
+  }
+}
+
+@layer components {
+  .kush-button {
+    background: linear-gradient(135deg, hsl(120, 75%, 40%), hsl(120, 75%, 30%));
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 0 30px hsl(120, 75%, 40% / 0.4), 0 0 60px hsl(75, 85%, 60% / 0.2);
+    border: 2px solid hsl(75, 85%, 60% / 0.3);
+  }
+
+  .kush-button:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 50px hsl(120, 75%, 40% / 0.7), 0 0 100px hsl(75, 85%, 60% / 0.4);
+    border-color: hsl(75, 85%, 60% / 0.6);
+  }
+
+  .kush-button:active {
+    transform: scale(0.95);
+  }
+
+  .click-animation {
+    animation: bounce-soft 0.3s ease-out;
+  }
+
+  .floating-text {
+    animation: float-up 1s ease-out forwards;
+  }
+
+  .gradient-border {
+    background: linear-gradient(135deg, hsl(120, 75%, 40%), hsl(75, 85%, 60%));
+    padding: 2px;
+    border-radius: 12px;
+  }
+
+  .gradient-border-inner {
+    background: var(--card);
+    border-radius: 10px;
+  }
+
+  .nav-btn {
+    @apply flex flex-col items-center justify-center space-y-1 p-3 rounded-lg text-muted-foreground transition-all duration-200 hover:text-primary cursor-pointer;
+    min-width: 44px;
+    min-height: 44px;
+  }
+  
+  .nav-btn:hover {
+    background-color: hsl(var(--primary) / 0.1);
+    transform: scale(1.05);
+  }
+
+  .nav-btn.active {
+    @apply text-primary;
+    background-color: hsl(var(--primary) / 0.2);
+    box-shadow: 0 0 10px hsl(var(--primary) / 0.3);
+  }
+
+  .nav-btn span {
+    @apply font-medium text-xs;
+  }
+
+  .game-section {
+    @apply opacity-100 transition-all duration-500 ease-in-out;
+    transform: translateY(0px);
+  }
+
+  .game-section.hidden {
+    @apply opacity-0 pointer-events-none;
+    transform: translateY(20px);
+  }
+
+  .section-fade-in {
+    animation: fadeInUp 0.4s ease-out;
+  }
+
+  .section-slide-in {
+    animation: slideIn 0.4s ease-out;
+  }
+
+  /* Skeleton loading animations */
+  .skeleton {
+    @apply bg-muted rounded-md;
+    background: linear-gradient(90deg, hsl(var(--muted)) 25%, hsl(var(--muted-foreground) / 0.1) 50%, hsl(var(--muted)) 75%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s infinite;
+  }
+
+  .skeleton-text {
+    @apply skeleton h-4 w-full mb-2;
+  }
+
+  .skeleton-card {
+    @apply skeleton h-24 w-full rounded-lg;
+  }
+
+  .skeleton-button {
+    @apply skeleton h-10 w-32 rounded-md;
+  }
+
+  .skeleton-avatar {
+    @apply skeleton w-12 h-12 rounded-full;
+  }
+
+  .pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+@keyframes bounce-soft {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes float-up {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-60px) scale(1.2);
+    opacity: 0;
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px hsl(142, 71%, 45% / 0.3);
+  }
+  50% {
+    box-shadow: 0 0 40px hsl(142, 71%, 45% / 0.8);
+  }
+}
+
+/* Enhanced Animations for Kush Klicker */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes float-up-fade {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) translateY(0px);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) translateY(-60px);
+  }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+@keyframes glow {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(34, 197, 94, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(34, 197, 94, 0.8);
+  }
+}
+
+@keyframes kush-click {
+  0% { 
+    transform: scale(1) rotate(0deg); 
+    box-shadow: 0 0 30px hsl(120, 75%, 40% / 0.4);
+  }
+  50% { 
+    transform: scale(1.15) rotate(2deg); 
+    box-shadow: 0 0 60px hsl(120, 75%, 40% / 0.8), 0 0 90px hsl(75, 85%, 60% / 0.6);
+  }
+  100% { 
+    transform: scale(1) rotate(0deg); 
+    box-shadow: 0 0 30px hsl(120, 75%, 40% / 0.4);
+  }
+}
+
+@keyframes particle-burst {
+  0% {
+    opacity: 1;
+    transform: scale(0) rotate(0deg);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.2) rotate(180deg);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.2) rotate(360deg);
+  }
+}
+
+@keyframes success-pulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 hsl(120, 75%, 40% / 0.7);
+  }
+  70% {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 10px hsl(120, 75%, 40% / 0);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 hsl(120, 75%, 40% / 0);
+  }
+}
+
+@keyframes ripple-effect {
+  0% {
+    transform: scale(0);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes section-transition {
+  0% {
+    opacity: 0;
+    transform: translateY(30px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0px) scale(1);
+  }
+}
+
+@keyframes haptic-pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
+
+@keyframes touch-feedback {
+  0% { 
+    transform: scale(1);
+    box-shadow: 0 0 0 0 hsl(var(--primary) / 0.3);
+  }
+  100% { 
+    transform: scale(0.95);
+    box-shadow: 0 0 0 8px hsl(var(--primary) / 0);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes achievement-unlock {
+  0% {
+    opacity: 0;
+    transform: scale(0.3) rotate(-10deg);
+    filter: brightness(0.5);
+  }
+  25% {
+    opacity: 0.8;
+    transform: scale(1.2) rotate(5deg);
+    filter: brightness(1.2);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1) rotate(-2deg);
+    filter: brightness(1.5);
+  }
+  75% {
+    opacity: 1;
+    transform: scale(1.05) rotate(1deg);
+    filter: brightness(1.2);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+    filter: brightness(1);
+  }
+}
+
+@keyframes purchase-success {
+  0% {
+    transform: scale(1);
+    background: var(--primary);
+  }
+  25% {
+    transform: scale(1.1);
+    background: linear-gradient(45deg, hsl(120, 75%, 50%), hsl(75, 85%, 60%));
+  }
+  50% {
+    transform: scale(1.05) rotateY(10deg);
+    background: linear-gradient(45deg, hsl(75, 85%, 60%), hsl(120, 75%, 50%));
+  }
+  75% {
+    transform: scale(1.02) rotateY(-5deg);
+    background: linear-gradient(45deg, hsl(120, 75%, 50%), hsl(75, 85%, 60%));
+  }
+  100% {
+    transform: scale(1) rotateY(0deg);
+    background: var(--primary);
+  }
+}
+
+@keyframes celebration-confetti {
+  0% {
+    opacity: 1;
+    transform: translateY(0) rotate(0deg) scale(1);
+  }
+  25% {
+    opacity: 0.9;
+    transform: translateY(-20px) rotate(90deg) scale(1.2);
+  }
+  50% {
+    opacity: 0.7;
+    transform: translateY(-40px) rotate(180deg) scale(0.8);
+  }
+  75% {
+    opacity: 0.4;
+    transform: translateY(-60px) rotate(270deg) scale(1.1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-100px) rotate(360deg) scale(0.3);
+  }
+}
+
+@keyframes mobile-touch-bounce {
+  0% { transform: scale(1); }
+  50% { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
+
+@keyframes seasonal-shimmer {
+  0% {
+    background-position: -200% 0;
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    background-position: 200% 0;
+    opacity: 0.8;
+  }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-float-up-fade {
+  animation: float-up-fade 1.5s ease-out forwards;
+}
+
+.animate-shake {
+  animation: shake 0.5s ease-in-out;
+}
+
+.animate-glow {
+  animation: glow 2s ease-in-out infinite;
+}
+
+.animate-kush-click {
+  animation: kush-click 0.2s ease-in-out;
+}
+
+.animate-slide-in {
+  animation: slideIn 0.3s ease-out;
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.5s ease-out;
+}
+
+.animate-achievement-unlock {
+  animation: achievement-unlock 0.6s ease-out;
+}
+
+.animate-particle-burst {
+  animation: particle-burst 0.8s ease-out forwards;
+}
+
+.animate-success-pulse {
+  animation: success-pulse 0.6s ease-out;
+}
+
+.animate-ripple {
+  animation: ripple-effect 0.6s ease-out forwards;
+}
+
+.animate-purchase-success {
+  animation: purchase-success 0.8s ease-out;
+}
+
+.animate-celebration-confetti {
+  animation: celebration-confetti 1.2s ease-out forwards;
+}
+
+.animate-mobile-touch-bounce {
+  animation: mobile-touch-bounce 0.1s ease-out;
+}
+
+.animate-seasonal-shimmer {
+  animation: seasonal-shimmer 2s ease-in-out infinite;
+}
+
+/* Enhanced button states */
+.kush-button.enhanced-click {
+  animation: kush-click 0.3s ease-out, success-pulse 0.6s ease-out 0.1s;
+}
+
+/* Particle system */
+.particle {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: radial-gradient(circle, hsl(120, 75%, 50%), hsl(75, 85%, 60%));
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 100;
+}
+
+.particle.small {
+  width: 4px;
+  height: 4px;
+}
+
+.particle.large {
+  width: 12px;
+  height: 12px;
+}
+
+/* Enhanced Mobile Touch Interactions */
+.touch-responsive {
+  @apply transition-all duration-200 active:scale-95;
+  touch-action: manipulation;
+}
+
+.touch-responsive:active {
+  animation: mobile-touch-bounce 0.1s ease-out;
+}
+
+/* Mobile-first game elements */
+.mobile-optimized {
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Telegram Web App Mobile Optimization */
+@media (max-width: 768px) {
+  .nav-btn {
+    @apply p-2 text-xs;
+    transition: all 0.2s ease-out;
+  }
+  
+  .nav-btn:active {
+    transform: scale(0.95);
+    background-color: hsl(var(--primary) / 0.2);
+    animation: haptic-pulse 0.1s ease-out;
+  }
+  
+  /* Optimize button sizes for touch */
+  .kush-button {
+    min-height: 60px;
+    touch-action: manipulation;
+    transition: all 0.15s ease-out;
+  }
+
+  .kush-button:active {
+    animation: touch-feedback 0.2s ease-out;
+  }
+
+  /* Enhanced mobile interactions */
+  .touch-interactive {
+    touch-action: manipulation;
+    transition: all 0.15s ease-out;
+  }
+
+  .touch-interactive:active {
+    transform: scale(0.97);
+    filter: brightness(0.9);
+    animation: haptic-pulse 0.1s ease-out;
+  }
+  
+  /* Mobile game section improvements */
+  .game-section {
+    scroll-snap-type: y mandatory;
+    scroll-behavior: smooth;
+  }
+  
+  /* Enhanced mobile button feedback */
+  .mobile-button-enhanced {
+    @apply transform transition-all duration-150 active:scale-95;
+    touch-action: manipulation;
+    min-height: 48px;
+    min-width: 48px;
+  }
+  
+  .mobile-button-enhanced:active {
+    animation: mobile-touch-bounce 0.1s ease-out;
+    box-shadow: 0 0 0 4px hsl(var(--primary) / 0.2);
+  }
+  
+  /* Compact mobile layout */
+  .game-container {
+    padding: 8px;
+    gap: 12px;
+  }
+  
+  /* Smaller text for mobile */
+  .mobile-text {
+    font-size: 14px;
+  }
+  
+  /* Reduce margins for mobile */
+  .mobile-compact {
+    margin: 4px 0;
+  }
+  
+  /* Ensure proper mobile scrolling */
+  body, html {
+    overflow-x: hidden;
+    overflow-y: auto !important;
+  }
+  
+  /* Mobile-friendly input fields */
+  input, textarea, select {
+    font-size: 16px; /* Prevent zoom on iOS */
+    touch-action: manipulation;
+  }
+  
+  /* Mobile button improvements */
+  button {
+    min-height: 44px; /* Apple's minimum touch target */
+    min-width: 44px;
+    touch-action: manipulation;
+  }
+  
+  /* Guild system mobile optimization */
+  .guild-mobile-scroll {
+    max-height: calc(100vh - 160px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Enhanced mobile scrolling support for all components */
+  .mobile-scroll {
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--primary) / 0.3) transparent;
+  }
+  
+  /* Mobile card enhancements */
+  .mobile-card-enhanced {
+    @apply transition-all duration-200 active:scale-[0.98];
+    touch-action: manipulation;
+  }
+  
+  /* Guild system mobile optimizations */
+  .guild-mobile-scroll {
+    max-height: calc(100vh - 120px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Desktop navigation styles */
+@media (min-width: 769px) {
+  .nav-btn {
+    @apply w-12 h-12;
+  }
+  
+  .nav-btn span {
+    @apply hidden;
+  }
+}
+
+/* Telegram-specific optimizations */
+@media screen and (max-height: 600px) {
+  /* For short screens like Telegram mini apps */
+  .compact-mode {
+    padding: 4px;
+    font-size: 12px;
+  }
+  
+  .game-header {
+    padding: 8px;
+  }
+  
+  .navigation-bar {
+    height: 60px;
+  }
+  
+  /* Ultra-compact mode for short screens */
+  .ultra-compact-nav {
+    height: 50px;
+    padding: 2px;
+  }
+  
+  .ultra-compact-nav .nav-btn {
+    min-height: 40px;
+    padding: 1px;
+  }
+  
+  .ultra-compact-nav .nav-btn span {
+    display: none;
+  }
+}
+
+/* Extra compact mode for small phones */
+@media (max-width: 480px) {
+  .ultra-compact {
+    padding: 2px;
+    font-size: 11px;
+    margin: 2px 0;
+  }
+  
+  .kush-button {
+    min-height: 140px;
+    width: 140px;
+    height: 140px;
+  }
+  
+  .nav-btn {
+    min-width: 48px;
+    padding: 4px 2px;
+  }
+  
+  .mobile-card-enhanced {
+    margin-bottom: 8px;
+    padding: 8px;
+  }
+}
+
+/* Landscape mobile optimization */
+@media screen and (max-height: 500px) and (orientation: landscape) {
+  .landscape-compact {
+    padding: 1px;
+    margin: 1px 0;
+  }
+  
+  .navigation-bar {
+    height: 45px;
+  }
+  
+  main {
+    padding-top: 45px !important;
+    padding-bottom: 60px !important;
+  }
+  
+  .kush-button {
+    width: 120px;
+    height: 120px;
+    min-height: 120px;
+  }
+}
+
+/* Guild Wars & Strategic Animations */
+@keyframes guild-war-pulse {
+  0%, 100% { 
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+  }
+  50% { 
+    transform: scale(1.05);
+    box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+  }
+}
+
+@keyframes territory-capture {
+  0% { transform: scale(1) rotate(0deg); }
+  25% { transform: scale(1.1) rotate(-5deg); }
+  50% { transform: scale(1.2) rotate(5deg); }
+  75% { transform: scale(1.1) rotate(-2deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+
+@keyframes quest-complete {
+  0% { 
+    transform: scale(1);
+    background: hsl(var(--card));
+  }
+  25% { 
+    transform: scale(1.05);
+    background: linear-gradient(45deg, hsl(168, 76%, 42%), hsl(158, 64%, 52%));
+  }
+  50% { 
+    transform: scale(1.1);
+    background: linear-gradient(45deg, hsl(158, 64%, 52%), hsl(168, 76%, 42%));
+  }
+  75% { 
+    transform: scale(1.05);
+    background: linear-gradient(45deg, hsl(168, 76%, 42%), hsl(158, 64%, 52%));
+  }
+  100% { 
+    transform: scale(1);
+    background: hsl(var(--card));
+  }
+}
+
+@keyframes war-victory {
+  0%, 100% { 
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  25% { 
+    transform: scale(1.1);
+    filter: brightness(1.2) hue-rotate(120deg);
+  }
+  50% { 
+    transform: scale(1.15);
+    filter: brightness(1.3) hue-rotate(180deg);
+  }
+  75% { 
+    transform: scale(1.1);
+    filter: brightness(1.2) hue-rotate(240deg);
+  }
+}
+
+.animate-guild-war-pulse {
+  animation: guild-war-pulse 2s ease-in-out infinite;
+}
+
+.animate-territory-capture {
+  animation: territory-capture 0.8s ease-out;
+}
+
+.animate-quest-complete {
+  animation: quest-complete 1s ease-out;
+}
+
+.animate-war-victory {
+  animation: war-victory 1.5s ease-out;
+}
+
+/* Guild Status Indicators */
+.guild-status-active {
+  position: relative;
+  overflow: hidden;
+}
+
+.guild-status-active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(34, 197, 94, 0.2),
+    transparent
+  );
+  animation: guild-status-sweep 2s infinite;
+}
+
+@keyframes guild-status-sweep {
+  0% { left: -100%; }
+  100% { left: 100%; }
+}
