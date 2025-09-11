@@ -51,7 +51,11 @@ import {
   seasonalEvents,
   eventRewards,
   tutorialRewards,
-  playerLoyalty
+  playerLoyalty,
+  // Wallet Authentication
+  walletAuth,
+  type InsertWalletAuth,
+  type WalletAuth
 } from "@shared/schema";
 import { FIFTY_ACHIEVEMENTS } from "./achievements-data";
 import { randomUUID } from "crypto";
@@ -59,11 +63,13 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import { eq, desc, and, gte, gt, sql, isNotNull } from "drizzle-orm";
 
+// Import performance cache for 1000+ players optimization
+import { cache, CacheKeys, CacheInvalidation, cached } from "./cache-service.js";
+
 export interface IStorage {
   // Player operations
   getPlayer(id: string): Promise<Player | undefined>;
   getPlayerByUsername(username: string): Promise<Player | undefined>;
-  getPlayerByDiscordId(discordUserId: string): Promise<Player | undefined>;
   getPlayerByTelegramId(telegramUserId: string): Promise<Player | undefined>;
   getPlayerByWalletAddress(walletAddress: string): Promise<Player | undefined>;
   createPlayer(player: InsertPlayer): Promise<Player>;
@@ -110,6 +116,10 @@ export interface IStorage {
   getPlayerTokenBurns(playerId: string): Promise<TokenBurn[]>;
   isTransactionSignatureUsed(transactionSignature: string): Promise<boolean>;
   updateTokenBurnStatus(burnId: string, status: string, transactionSignature?: string): Promise<TokenBurn | undefined>;
+  
+  // Lifetime on-chain burn tracking
+  getPlayerLifetimeBurned(playerId: string): Promise<number>;
+  getWalletLifetimeBurned(walletAddress: string): Promise<number>;
   
   // Referral operations
   getPlayerByReferralHandle(handle: string): Promise<Player | undefined>;
@@ -264,6 +274,12 @@ export interface IStorage {
   flagSuspiciousActivity(playerId: string, reason: string): Promise<any>;
   getFlaggedActivities(): Promise<any[]>;
   reviewFlaggedActivity(activityId: string, resolution: string): Promise<any>;
+
+  // Wallet Authentication operations
+  createWalletAuth(walletAuth: InsertWalletAuth): Promise<WalletAuth>;
+  getWalletAuth(walletAddress: string): Promise<WalletAuth | undefined>;
+  validateWalletLogin(walletAddress: string, password: string): Promise<WalletAuth | null>;
+  updateWalletLastLogin(walletAddress: string): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -398,9 +414,6 @@ export class MemStorage implements IStorage {
   }
 
   // Optimized lookups (memory storage stubs)
-  async getPlayerByDiscordId(discordUserId: string): Promise<Player | undefined> {
-    return Array.from(this.players.values()).find(p => p.discordUserId === discordUserId);
-  }
 
   async getPlayerByTelegramId(telegramUserId: string): Promise<Player | undefined> {
     return Array.from(this.players.values()).find(p => p.telegramUserId === telegramUserId);
@@ -416,7 +429,6 @@ export class MemStorage implements IStorage {
       ...insertPlayer, 
       id,
       telegramUserId: insertPlayer.telegramUserId || null,
-      discordUserId: insertPlayer.discordUserId || null,
       totalKush: insertPlayer.totalKush || 0,
       totalClicks: insertPlayer.totalClicks || 0,
       perClickMultiplier: insertPlayer.perClickMultiplier || 1,
@@ -630,6 +642,14 @@ export class MemStorage implements IStorage {
 
   async getPlayerTokenBurns(playerId: string): Promise<TokenBurn[]> {
     return [];
+  }
+
+  async getPlayerLifetimeBurned(playerId: string): Promise<number> {
+    return 0;
+  }
+
+  async getWalletLifetimeBurned(walletAddress: string): Promise<number> {
+    return 0;
   }
 
   async isTransactionSignatureUsed(transactionSignature: string): Promise<boolean> {
@@ -1032,6 +1052,32 @@ export class MemStorage implements IStorage {
   async joinTournament(playerId: string, tournamentId: string): Promise<void> { }
   async getOpenTournaments(): Promise<any[]> { return []; }
   async getBattleLeaderboard(): Promise<any[]> { return []; }
+
+  // Wallet Authentication operations (stubs for memory storage)
+  async createWalletAuth(walletAuth: InsertWalletAuth): Promise<WalletAuth> {
+    const walletAuthRecord: WalletAuth = {
+      id: randomUUID(),
+      walletAddress: walletAuth.walletAddress,
+      passwordHash: walletAuth.passwordHash,
+      playerId: walletAuth.playerId || null,
+      isActive: walletAuth.isActive ?? true,
+      createdAt: new Date(),
+      lastLogin: null,
+    };
+    return walletAuthRecord;
+  }
+  
+  async getWalletAuth(walletAddress: string): Promise<WalletAuth | undefined> {
+    return undefined; // Not implemented in memory storage
+  }
+  
+  async validateWalletLogin(walletAddress: string, password: string): Promise<WalletAuth | null> {
+    return null; // Not implemented in memory storage
+  }
+  
+  async updateWalletLastLogin(walletAddress: string): Promise<void> {
+    // Not implemented in memory storage
+  }
 }
 
 // Database storage implementation using Drizzle ORM
@@ -1152,15 +1198,23 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getPlayer(id: string): Promise<Player | undefined> {
+    // Check cache first for 1000+ players optimization
+    const cacheKey = CacheKeys.player(id);
+    const cached = cache.get<Player>(cacheKey);
+    if (cached) return cached;
+
     const result = await this.db.select().from(players).where(eq(players.id, id)).limit(1);
-    return result[0] || undefined;
+    const player = result[0] || undefined;
+    
+    // Cache for 2 minutes (active players)
+    if (player) {
+      cache.set(cacheKey, player, 2 * 60 * 1000);
+    }
+    
+    return player;
   }
 
   // Optimized lookups for 5000+ concurrent players
-  async getPlayerByDiscordId(discordUserId: string): Promise<Player | undefined> {
-    const result = await this.db.select().from(players).where(eq(players.discordUserId, discordUserId)).limit(1);
-    return result[0] || undefined;
-  }
 
   async getPlayerByTelegramId(telegramUserId: string): Promise<Player | undefined> {
     const result = await this.db.select().from(players).where(eq(players.telegramUserId, telegramUserId)).limit(1);
@@ -1199,10 +1253,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updatePlayer(id: string, updates: Partial<Player>): Promise<Player | undefined> {
+    // Invalidate cache for this player since we're updating
+    CacheInvalidation.player(id);
+    
     const result = await this.db.update(players)
       .set({ ...updates, lastActive: new Date() })
       .where(eq(players.id, id))
       .returning();
+    
+    // Cache the updated player data immediately
+    if (result[0]) {
+      const cacheKey = CacheKeys.player(id);
+      cache.set(cacheKey, result[0], 2 * 60 * 1000);
+    }
+    
     return result[0] || undefined;
   }
 
@@ -1237,10 +1301,23 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getPlayerUpgrades(playerId: string): Promise<PlayerUpgrade[]> {
-    return await this.db.select().from(playerUpgrades).where(eq(playerUpgrades.playerId, playerId));
+    // Check cache first - upgrades change less frequently
+    const cacheKey = CacheKeys.playerUpgrades(playerId);
+    const cached = cache.get<PlayerUpgrade[]>(cacheKey);
+    if (cached) return cached;
+
+    const result = await this.db.select().from(playerUpgrades).where(eq(playerUpgrades.playerId, playerId));
+    
+    // Cache for 5 minutes 
+    cache.set(cacheKey, result, 5 * 60 * 1000);
+    
+    return result;
   }
 
   async buyUpgrade(playerUpgrade: InsertPlayerUpgrade): Promise<PlayerUpgrade> {
+    // Invalidate cache for player upgrades since we're updating
+    CacheInvalidation.player(playerUpgrade.playerId);
+    
     // Check if this specific upgrade already exists for this player
     const existing = await this.db.select().from(playerUpgrades)
       .where(and(
@@ -1398,6 +1475,30 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(tokenBurns.createdAt));
   }
 
+  async getPlayerLifetimeBurned(playerId: string): Promise<number> {
+    const result = await this.db.select({
+      total: sql<number>`COALESCE(SUM(${tokenBurns.tokensBurned}), 0)`
+    }).from(tokenBurns)
+      .where(and(
+        eq(tokenBurns.playerId, playerId),
+        eq(tokenBurns.status, 'completed')
+      ));
+    
+    return Number(result[0]?.total || 0);
+  }
+
+  async getWalletLifetimeBurned(walletAddress: string): Promise<number> {
+    const result = await this.db.select({
+      total: sql<number>`COALESCE(SUM(${tokenBurns.tokensBurned}), 0)`
+    }).from(tokenBurns)
+      .where(and(
+        eq(tokenBurns.walletAddress, walletAddress),
+        eq(tokenBurns.status, 'completed')
+      ));
+    
+    return Number(result[0]?.total || 0);
+  }
+
   /**
    * Check if transaction signature has been used by ANY user (security check)
    */
@@ -1535,10 +1636,15 @@ export class DatabaseStorage implements IStorage {
     const existing = await this.getPlayerDailyChallengeProgress(playerId, challengeId, dateActive);
     
     if (existing) {
+      const newProgress = existing.progress + incrementValue;
+      console.log(`📈 CHALLENGE: Player ${playerId} challenge ${challengeId}: ${existing.progress} + ${incrementValue} = ${newProgress}`);
+      
       await this.db.update(playerDailyChallenges)
-        .set({ progress: existing.progress + incrementValue })
+        .set({ progress: newProgress })
         .where(eq(playerDailyChallenges.id, existing.id));
     } else {
+      console.log(`📈 CHALLENGE: New challenge record for player ${playerId} challenge ${challengeId}: ${incrementValue}`);
+      
       await this.db.insert(playerDailyChallenges).values({
         playerId,
         challengeId,
@@ -1575,6 +1681,13 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
+  async getFriendshipById(friendshipId: string): Promise<any> {
+    const result = await this.db.select().from(friendships)
+      .where(eq(friendships.id, friendshipId))
+      .limit(1);
+    return result[0];
+  }
+
   async updateFriendshipStatus(friendshipId: string, status: string): Promise<void> {
     await this.db.update(friendships)
       .set({ status, acceptedAt: status === 'accepted' ? new Date() : null })
@@ -1582,19 +1695,52 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getPlayerFriends(playerId: string): Promise<any[]> {
-    return await this.db.select().from(friendships)
-      .where(and(
-        eq(friendships.playerId, playerId),
-        eq(friendships.status, 'accepted')
-      ));
+    // Get friendships where the player is either the sender or receiver of accepted requests
+    const result = await this.db.select({
+      id: friendships.id,
+      playerId: friendships.playerId,
+      friendId: friendships.friendId,
+      status: friendships.status,
+      acceptedAt: friendships.acceptedAt,
+      friend: {
+        id: players.id,
+        username: players.username,
+        totalKush: players.totalKush,
+        level: players.level
+      }
+    })
+    .from(friendships)
+    .innerJoin(players, eq(friendships.friendId, players.id))
+    .where(and(
+      eq(friendships.playerId, playerId),
+      eq(friendships.status, 'accepted')
+    ));
+    
+    return result;
   }
 
   async getPendingFriendRequests(playerId: string): Promise<any[]> {
-    return await this.db.select().from(friendships)
-      .where(and(
-        eq(friendships.friendId, playerId),
-        eq(friendships.status, 'pending')
-      ));
+    const result = await this.db.select({
+      id: friendships.id,
+      playerId: friendships.playerId,
+      friendId: friendships.friendId,
+      status: friendships.status,
+      requestedAt: friendships.requestedAt,
+      friend: {
+        id: players.id,
+        username: players.username,
+        totalKush: players.totalKush,
+        level: players.level
+      }
+    })
+    .from(friendships)
+    .innerJoin(players, eq(friendships.playerId, players.id))
+    .where(and(
+      eq(friendships.friendId, playerId),
+      eq(friendships.status, 'pending')
+    ));
+    
+    return result;
   }
 
   async createFriendGift(data: any): Promise<any> {
@@ -1641,8 +1787,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getGuildMembers(guildId: string): Promise<any[]> {
-    return await this.db.select().from(guildMembers)
-      .where(eq(guildMembers.guildId, guildId));
+    // Join with players table to get usernames instead of "Unknown Player"
+    return await this.db.select({
+      id: guildMembers.id,
+      playerId: guildMembers.playerId,
+      guildId: guildMembers.guildId,
+      role: guildMembers.role,
+      kushContributed: guildMembers.kushContributed,
+      joinedAt: guildMembers.joinedAt,
+      // Include player data
+      playerUsername: players.username,
+      playerTotalKush: players.totalKush
+    }).from(guildMembers)
+      .innerJoin(players, eq(guildMembers.playerId, players.id))
+      .where(eq(guildMembers.guildId, guildId))
+      .orderBy(desc(guildMembers.kushContributed));
   }
 
   async getGuildLeaderboard(): Promise<any[]> {
@@ -2075,7 +2234,8 @@ export class DatabaseStorage implements IStorage {
     const result = await this.db.insert(tutorialRewards).values({
       playerId,
       stepId,
-      reward
+      reward,
+      claimedAt: new Date()
     }).returning();
     return result[0];
   }
@@ -2237,20 +2397,10 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
-  // Missing method implementations for IStorage interface
-  async getStakingPools(): Promise<any[]> { 
-    return await this.db.select().from(stakingPools); 
-  }
+  // Additional helper methods
   async getStakingPool(poolId: string): Promise<any> { 
     const result = await this.db.select().from(stakingPools).where(eq(stakingPools.id, poolId)).limit(1);
     return result[0] || null;
-  }
-  async createPlayerStake(stakeData: any): Promise<any> { 
-    const result = await this.db.insert(playerStakes).values(stakeData).returning();
-    return result[0];
-  }
-  async getPlayerStakes(playerId: string): Promise<any[]> { 
-    return await this.db.select().from(playerStakes).where(eq(playerStakes.playerId, playerId));
   }
   async getPlayerStake(stakeId: string): Promise<any> { 
     const result = await this.db.select().from(playerStakes).where(eq(playerStakes.id, stakeId)).limit(1);
@@ -2263,10 +2413,6 @@ export class DatabaseStorage implements IStorage {
   async getPlayerById(playerId: string): Promise<any> { return this.getPlayer(playerId); }
   async getMarketplaceItems(): Promise<any[]> { 
     return await this.db.select().from(marketplaceListings);
-  }
-  async createPlayerWallet(playerId: string, walletData: any): Promise<any> { 
-    const result = await this.db.insert(playerWallets).values({ playerId, ...walletData }).returning();
-    return result[0];
   }
   async getOnboardingProgress(playerId: string): Promise<any> { return null; }
   async updateOnboardingProgress(playerId: string, updates: any): Promise<any> { return null; }
@@ -2287,18 +2433,7 @@ export class DatabaseStorage implements IStorage {
   async flagSuspiciousActivity(playerId: string, reason: string): Promise<any> { return null; }
   async getFlaggedActivities(): Promise<any[]> { return []; }
   async reviewFlaggedActivity(activityId: string, resolution: string): Promise<any> { return null; }
-  async getTutorialReward(playerId: string, stepId: number): Promise<any> { 
-    const result = await this.db.select().from(tutorialRewards)
-      .where(and(eq(tutorialRewards.playerId, playerId), eq(tutorialRewards.stepId, stepId)))
-      .limit(1);
-    return result[0] || null;
-  }
-  async recordTutorialReward(playerId: string, stepId: number, reward: number): Promise<any> { 
-    const result = await this.db.insert(tutorialRewards)
-      .values({ playerId, stepId, reward, completedAt: new Date() })
-      .returning();
-    return result[0];
-  }
+  // Tutorial reward methods already implemented above at lines 2053-2072
 
   // Missing critical method for deployment
   async updatePlayerWallet(playerId: string, updates: any): Promise<any> {
@@ -2307,6 +2442,58 @@ export class DatabaseStorage implements IStorage {
       .where(eq(playerWallets.playerId, playerId))
       .returning();
     return result[0];
+  }
+
+  // ===== WALLET AUTHENTICATION OPERATIONS =====
+
+  async createWalletAuth(walletAuthData: InsertWalletAuth): Promise<WalletAuth> {
+    const { hashPassword } = await import('./auth-utils.js');
+    
+    // Hash the password before storing
+    const passwordHash = await hashPassword(walletAuthData.passwordHash);
+    
+    const [walletAuthRecord] = await this.db.insert(walletAuth)
+      .values({
+        ...walletAuthData,
+        passwordHash,
+      })
+      .returning();
+    
+    console.log(`🔐 Created wallet auth for address: ${walletAuthData.walletAddress}`);
+    return walletAuthRecord;
+  }
+
+  async getWalletAuth(walletAddress: string): Promise<WalletAuth | undefined> {
+    const [walletAuthRecord] = await this.db.select()
+      .from(walletAuth)
+      .where(eq(walletAuth.walletAddress, walletAddress.trim()));
+    return walletAuthRecord;
+  }
+
+  async validateWalletLogin(walletAddress: string, password: string): Promise<WalletAuth | null> {
+    const { verifyPassword } = await import('./auth-utils.js');
+    
+    const walletAuthRecord = await this.getWalletAuth(walletAddress);
+    if (!walletAuthRecord || !walletAuthRecord.isActive) {
+      return null;
+    }
+
+    const isValidPassword = await verifyPassword(password, walletAuthRecord.passwordHash);
+    if (!isValidPassword) {
+      return null;
+    }
+
+    // Update last login timestamp
+    await this.updateWalletLastLogin(walletAddress);
+    
+    console.log(`🔓 Successful wallet login for address: ${walletAddress.slice(0, 8)}...`);
+    return walletAuthRecord;
+  }
+
+  async updateWalletLastLogin(walletAddress: string): Promise<void> {
+    await this.db.update(walletAuth)
+      .set({ lastLogin: new Date() })
+      .where(eq(walletAuth.walletAddress, walletAddress.trim()));
   }
 }
 

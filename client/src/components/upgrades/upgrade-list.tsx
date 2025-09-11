@@ -3,6 +3,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { formatNumber } from "@/lib/game-utils";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { playPurchaseSound, playUpgradeSound } from "@/lib/game-utils";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import type { Upgrade, PlayerUpgrade } from "@shared/schema";
 
 interface UpgradeListProps {
@@ -59,6 +61,8 @@ export default function UpgradeList({ gameState }: UpgradeListProps) {
       }, 1500);
       
       // Enhanced success toast with gradient
+      // Play success sound and show toast
+      playUpgradeSound();
       toast({
         title: "🎉 Upgrade Purchased!",
         description: `Successfully upgraded! Spent ${formatNumber(data.cost)} KUSH.`,
@@ -144,9 +148,17 @@ export default function UpgradeList({ gameState }: UpgradeListProps) {
                       }`}
                       data-testid={`button-buy-upgrade-${upgrade.id}`}
                     >
-                      {justPurchased.has(upgrade.id) ? '✓ BOUGHT!' :
-                       purchasingUpgrades.has(upgrade.id) ? 'BUYING...' :
-                       affordable ? 'BUY' : 'TOO EXPENSIVE'}
+                      {justPurchased.has(upgrade.id) ? (
+                        <>
+                          <i className="fas fa-check mr-1 text-green-400"></i>
+                          BOUGHT!
+                        </>
+                      ) : purchasingUpgrades.has(upgrade.id) ? (
+                        <>
+                          <LoadingSpinner size="sm" className="mr-1" />
+                          BUYING...
+                        </>
+                      ) : affordable ? 'BUY' : 'TOO EXPENSIVE'}
                     </button>
                   </div>
                 </div>

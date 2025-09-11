@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { AlertCircle, ExternalLink, Wallet, CheckCircle } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { EnhancedButton } from '@/components/ui/enhanced-button';
 import NetworkSwitcher from './network-switcher';
 import type { SolanaNetwork } from '@/lib/solana-config';
 
@@ -238,14 +239,16 @@ export default function RealWalletConnect({ gameState }: RealWalletConnectProps)
                       <Badge variant="default">Connected</Badge>
                     </div>
                   ) : (
-                    <Button
+                    <EnhancedButton
                       size="sm"
+                      loading={connecting}
+                      loadingText="Connecting..."
                       onClick={() => handleConnect(walletOption.name)}
-                      disabled={connecting || connected}
+                      disabled={connected}
                       data-testid={`button-connect-${walletOption.name.toLowerCase()}`}
                     >
-                      {connecting ? 'Connecting...' : 'Connect'}
-                    </Button>
+                      Connect
+                    </EnhancedButton>
                   )}
                 </div>
               ))}

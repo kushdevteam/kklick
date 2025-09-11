@@ -2,6 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { formatNumber } from "@/lib/game-utils";
 import { useState, useEffect } from 'react';
 import { useToast } from "@/hooks/use-toast";
+import { playAchievementSound } from "@/lib/game-utils";
+import { AchievementsSkeleton } from "@/components/ui/skeleton";
 
 type Achievement = {
   id: string;
@@ -27,14 +29,16 @@ export default function AchievementList({ gameState }: AchievementListProps) {
   const [newlyCompleted, setNewlyCompleted] = useState<Set<string>>(new Set());
   const [previousCompletedIds, setPreviousCompletedIds] = useState<Set<string>>(new Set());
   
-  const { data: achievements = [] } = useQuery<Achievement[]>({
+  const { data: achievements = [], isLoading } = useQuery<Achievement[]>({
     queryKey: ['/api/players', gameState.id, 'achievements'],
   });
-  
-  // Detect newly completed achievements
+
+  // Detect newly completed achievements - MUST be called before any early returns
   useEffect(() => {
+    if (achievements.length === 0) return; // Prevent infinite loop on empty achievements
+    
     const currentCompleted = new Set(achievements.filter(a => a.completed).map(a => a.id));
-    const newCompletions = [...currentCompleted].filter(id => !previousCompletedIds.has(id));
+    const newCompletions = Array.from(currentCompleted).filter(id => !previousCompletedIds.has(id));
     
     if (newCompletions.length > 0) {
       setNewlyCompleted(new Set(newCompletions));
@@ -43,6 +47,8 @@ export default function AchievementList({ gameState }: AchievementListProps) {
       newCompletions.forEach(achievementId => {
         const achievement = achievements.find(a => a.id === achievementId);
         if (achievement) {
+          // Play celebratory sound and show achievement toast
+          playAchievementSound();
           toast({
             title: `🏆 Achievement Unlocked!`,
             description: `${achievement.name} - Earned ${formatNumber(achievement.reward)} KUSH bonus!`,
@@ -57,8 +63,17 @@ export default function AchievementList({ gameState }: AchievementListProps) {
       }, 2000);
     }
     
-    setPreviousCompletedIds(currentCompleted);
-  }, [achievements, previousCompletedIds, toast]);
+    // Only update previous completed when there are actual changes
+    if (currentCompleted.size !== previousCompletedIds.size || 
+        Array.from(currentCompleted).some(id => !previousCompletedIds.has(id))) {
+      setPreviousCompletedIds(currentCompleted);
+    }
+  }, [achievements, toast]); // Removed previousCompletedIds from deps to prevent infinite loop
+
+  // Show skeleton loading while data is loading - AFTER all hooks
+  if (isLoading) {
+    return <AchievementsSkeleton />;
+  }
 
   const completedCount = achievements.filter(a => a.completed).length;
   const inProgressCount = achievements.filter(a => !a.completed && a.progress > 0).length;

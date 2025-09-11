@@ -12,17 +12,8 @@ function isAdmin(username?: string): boolean {
 
 // Get the current development or production URL
 function getWebAppUrl(): string {
-  // In development, use the current workspace URL from environment
-  if (process.env.NODE_ENV === 'development') {
-    const replitDomain = process.env.REPLIT_DEV_DOMAIN;
-    if (replitDomain) {
-      return `https://${replitDomain}`;
-    }
-    // Fallback to manual construction if REPLIT_DEV_DOMAIN is not available
-    return `https://5000-${process.env.REPL_SLUG || 'replit'}-${process.env.REPL_OWNER || 'user'}.repl.co`;
-  }
-  // In production, use the deployed URL
-  return process.env.WEB_APP_URL || process.env.REPLIT_DEV_DOMAIN || 'https://localhost:5000';
+  // Always use the production URL
+  return 'https://kushklicker.com/';
 }
 
 // Global bot instance to prevent duplicate initialization
@@ -77,10 +68,15 @@ export function startTelegramBot() {
     return null;
   }
 
-  // Prevent duplicate bot initialization
+  // Force bot recreation if token might have changed
   if (botInstance) {
-    console.log('🤖 Telegram bot already running');
-    return botInstance;
+    console.log('🤖 Stopping existing Telegram bot for token update...');
+    try {
+      botInstance.stopPolling();
+    } catch (error) {
+      console.warn('⚠️ Error stopping existing bot:', error);
+    }
+    botInstance = null;
   }
 
   // Check for existing polling processes to prevent conflicts
@@ -1148,13 +1144,64 @@ Example: \`/link 7dHbWY1gP9fGv8K3m2C9V4u...\`
             bot.sendMessage(chatId, helpMessage, { parse_mode: 'Markdown' });
             break;
           case 'refresh_start':
-            // Trigger the start command manually
-            bot.sendMessage(chatId, `🎮 **Welcome back to KushKlicker!** 🌿
+            // Trigger the start command manually with proper keyboard
+            const refreshMessage = `
+🌿 Welcome to KushKlicker! 🌿
 
-🚀 **Ready to grow your KUSH empire?**
-Click the button below to jump back into the action!
+The ultimate cannabis-themed incremental clicker game! Build your KUSH empire from the ground up and earn real $KUSH token rewards!
 
-[**🎮 Play Now →**](${getWebAppUrl()})`, { parse_mode: 'Markdown' });
+🎯 **Game Features:**
+• 🖱️ Click to earn KUSH tokens
+• 🏪 Buy powerful upgrades & grow lights
+• 🏆 Complete 50+ achievements for bonuses
+• 🏆 Compete on global leaderboards
+• 💰 Connect Solana wallet for real $KUSH token rewards
+• 👥 Referral system for bonus earnings
+
+🚀 **Quick Start Guide:**
+1. Click "🎮 Play Now" to start the game
+2. Start clicking to earn your first KUSH
+3. Use /link to connect your account
+4. Register your wallet with /wallet for rewards
+
+💎 **Pro Tips:**
+• Buy upgrades early to maximize earnings
+• Complete achievements for bonus rewards
+• Invite friends for referral bonuses
+• Check /balance to see your $KUSH token rewards
+
+Ready to become the ultimate KUSH mogul? 🚀
+            `;
+            
+            const refreshKeyboard = {
+              reply_markup: {
+                inline_keyboard: [
+                  [{ text: '🎮 Play Now', web_app: { url: getWebAppUrl() } }],
+                  [
+                    { text: '📊 My Stats', callback_data: 'my_stats' },
+                    { text: '🏆 Leaderboard', callback_data: 'leaderboard' }
+                  ],
+                  [
+                    { text: '🌱 Garden System', callback_data: 'garden_info' },
+                    { text: '⚔️ PvP Arena', callback_data: 'pvp_info' }
+                  ],
+                  [
+                    { text: '🎯 Achievements', callback_data: 'achievements' },
+                    { text: '💰 My Wallet', callback_data: 'my_wallet' }
+                  ],
+                  [
+                    { text: '🔗 Link Account', callback_data: 'link_help' },
+                    { text: '💎 Check Balance', callback_data: 'check_balance' }
+                  ],
+                  [
+                    { text: '❓ Help & Commands', callback_data: 'show_help' },
+                    { text: '🔄 Refresh Menu', callback_data: 'refresh_start' }
+                  ]
+                ]
+              }
+            };
+            
+            bot.sendMessage(chatId, refreshMessage, refreshKeyboard);
             break;
           default:
             bot.sendMessage(chatId, "❓ Unknown action. Use /start to see the main menu.");

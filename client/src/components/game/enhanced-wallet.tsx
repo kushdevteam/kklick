@@ -9,10 +9,21 @@ interface EnhancedWalletProps {
 export default function EnhancedWallet({ playerId }: EnhancedWalletProps) {
   const [selectedToken, setSelectedToken] = useState<'kush' | 'seeds'>('kush');
 
+  // Get in-game wallet data (SEEDS, etc.)
   const { data: wallet } = useQuery({
     queryKey: ['wallet', playerId],
     queryFn: async () => {
       const response = await apiRequest('GET', `/api/players/${playerId}/wallet`);
+      return response.json();
+    },
+    enabled: !!playerId,
+  });
+
+  // Get real on-chain $KUSH token balance  
+  const { data: tokenBalance } = useQuery({
+    queryKey: ['/api/players', playerId, 'token-balance'],
+    queryFn: async () => {
+      const response = await apiRequest('GET', `/api/players/${playerId}/token-balance`);
       return response.json();
     },
     enabled: !!playerId,
@@ -25,6 +36,9 @@ export default function EnhancedWallet({ playerId }: EnhancedWalletProps) {
   };
 
   if (!wallet) return <div className="animate-pulse bg-card/50 h-32 rounded-xl"></div>;
+
+  // Use on-chain balance for KUSH, fallback to 0 if no wallet linked
+  const onChainKushBalance = tokenBalance?.hasWallet ? tokenBalance.balance : 0;
 
   return (
     <div className="bg-gradient-to-br from-card to-card/80 rounded-xl p-6 border border-primary/20 shadow-xl">
@@ -63,21 +77,27 @@ export default function EnhancedWallet({ playerId }: EnhancedWalletProps) {
               </div>
               <div>
                 <p className="text-sm font-medium">$KUSH Balance</p>
-                <p className="text-2xl font-bold text-primary">{formatNumber(wallet.kushBalance)}</p>
+                <p className="text-2xl font-bold text-primary">{formatNumber(onChainKushBalance)}</p>
               </div>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3 text-xs">
             <div className="bg-muted/50 p-2 rounded-lg">
-              <p className="text-muted-foreground">Total Earned</p>
-              <p className="font-semibold">{formatNumber(wallet.totalEarnedKush)}</p>
+              <p className="text-muted-foreground">Wallet Status</p>
+              <p className="font-semibold">{tokenBalance?.hasWallet ? 'Linked ✅' : 'Not Linked ❌'}</p>
             </div>
             <div className="bg-muted/50 p-2 rounded-lg">
-              <p className="text-muted-foreground">Staked</p>
-              <p className="font-semibold">{formatNumber(wallet.stakedKush)}</p>
+              <p className="text-muted-foreground">Network</p>
+              <p className="font-semibold">Solana</p>
             </div>
           </div>
+
+          {!tokenBalance?.hasWallet && (
+            <div className="text-center text-xs text-muted-foreground bg-primary/5 p-2 rounded-lg">
+              💡 Link your Solana wallet to see real $KUSH token balance
+            </div>
+          )}
         </div>
       ) : (
         <div className="space-y-3">

@@ -9,7 +9,6 @@ import net from "net";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { startTelegramBot } from "./telegram-bot";
-import { startDiscordBot } from "./discord-bot";
 import { startKushNotifyBot } from "./kush-notify-bot";
 import { mainnetTokenService } from "./solana-token-service";
 import { tokenIntegration } from "./token-integration";
@@ -473,11 +472,6 @@ app.use((req, res, next) => {
     // Start bots after server is running
     startTelegramBot();
     startKushNotifyBot();
-    try {
-      await startDiscordBot();
-    } catch (error) {
-      console.error('Discord bot startup failed:', error);
-    }
   });
   
   // Handle server startup errors

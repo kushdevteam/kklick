@@ -23,7 +23,7 @@ export default function MobileNav({ currentSection, onSectionChange }: MobileNav
     onSectionChange(sectionId as GameSection);
   };
   const navItems = [
-    { id: 'game', icon: 'fas fa-cannabis', label: 'Mine' },
+    { id: 'game', icon: 'logo', label: 'Mine' },
     { id: 'upgrades', icon: 'fas fa-bolt', label: 'Upgrades' },
     { id: 'wallet', icon: 'fas fa-coins', label: 'Wallet' },
     { id: 'tokens', icon: 'fas fa-fire', label: 'Tokens' },
@@ -45,12 +45,16 @@ export default function MobileNav({ currentSection, onSectionChange }: MobileNav
           <button
             key={item.id}
             onClick={() => handleNavClick(item.id)}
-            className={`nav-btn flex-shrink-0 flex flex-col items-center justify-center px-2 py-1 min-w-[55px] touch-action-manipulation transition-all duration-200 ${
+            className={`nav-btn flex-shrink-0 flex flex-col items-center justify-center px-2 py-1 min-w-[55px] touch-action-manipulation mobile-optimized transition-all duration-200 ${
               currentSection === item.id ? 'active' : ''
             } ${pressedButton === item.id ? 'animate-mobile-touch-bounce scale-95' : ''}`}
             data-testid={`nav-${item.id}`}
           >
-            <i className={`${item.icon} text-lg mb-1`}></i>
+            {item.icon === 'logo' ? (
+              <img src="/favicon.png?v=092025" alt="KUSH Character" className="w-5 h-5 mb-1 object-contain" />
+            ) : (
+              <i className={`${item.icon} text-lg mb-1`}></i>
+            )}
             <span className="text-xs leading-tight">{item.label}</span>
           </button>
         ))}

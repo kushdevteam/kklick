@@ -2,7 +2,9 @@ import WalletRegistration from './wallet-registration';
 import { useQueryClient, useQuery, useMutation } from '@tanstack/react-query';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { RefreshCw } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { RefreshCw, Edit3, User, Save, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import type { SolanaNetwork } from '@/lib/solana-config';
@@ -25,12 +27,46 @@ export default function WalletSection({ gameState }: WalletSectionProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [lastUpdated, setLastUpdated] = useState<number | null>(null);
+  const [isEditingUsername, setIsEditingUsername] = useState(false);
+  const [newUsername, setNewUsername] = useState(gameState.username);
+
+  // Update newUsername when gameState.username changes
+  useEffect(() => {
+    setNewUsername(gameState.username);
+  }, [gameState.username]);
 
   // Fetch live token balance
   const { data: balanceData, isLoading: balanceLoading, refetch: refetchBalance } = useQuery({
     queryKey: ['/api/players', gameState.id, 'token-balance'],
     enabled: !!gameState.walletAddress,
     refetchInterval: 120000, // Refetch every 2 minutes (reduced from 30s to save RPC calls)
+  });
+
+  // Username change mutation
+  const changeUsernameMutation = useMutation({
+    mutationFn: async (username: string) => {
+      const response = await apiRequest('POST', `/api/players/${gameState.id}/change-username`, {
+        username: username.trim()
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Username Updated",
+        description: `Username changed to: ${data.username}`,
+      });
+      setIsEditingUsername(false);
+      // Refresh player data
+      queryClient.invalidateQueries({ queryKey: ['/api/players', gameState.id] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Username Change Failed",
+        description: error.message || "Failed to change username",
+        variant: "destructive"
+      });
+      setNewUsername(gameState.username); // Reset to original
+    }
   });
 
   // Manual refresh mutation
@@ -81,12 +117,119 @@ export default function WalletSection({ gameState }: WalletSectionProps) {
     }
   }, [gameState.id, gameState.walletAddress, queryClient, toast]);
 
+  const handleUsernameChange = () => {
+    if (newUsername.trim() === gameState.username) {
+      setIsEditingUsername(false);
+      return;
+    }
+    
+    if (!newUsername.trim()) {
+      toast({
+        title: "Invalid Username",
+        description: "Username cannot be empty",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (newUsername.trim().length < 3) {
+      toast({
+        title: "Invalid Username",
+        description: "Username must be at least 3 characters long",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    changeUsernameMutation.mutate(newUsername.trim());
+  };
+
+  const handleCancelEdit = () => {
+    setNewUsername(gameState.username);
+    setIsEditingUsername(false);
+  };
+
   return (
     <div className="container mx-auto px-4 py-6 max-w-4xl">
       <div className="flex items-center space-x-3 mb-6">
         <i className="fas fa-wallet text-blue-400 text-2xl"></i>
         <h2 className="text-2xl font-bold text-foreground" data-testid="text-wallet-title">Wallet & Account</h2>
       </div>
+
+      {/* Username Management */}
+      <Card className="bg-card/50 border-border mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <User className="h-5 w-5 text-primary" />
+            <span>Account Settings</span>
+          </CardTitle>
+          <CardDescription>
+            Customize your display name and manage your account preferences
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <label className="text-sm font-medium text-foreground mb-2 block">
+              Display Username
+            </label>
+            {isEditingUsername ? (
+              <div className="flex items-center gap-2">
+                <Input
+                  value={newUsername}
+                  onChange={(e) => setNewUsername(e.target.value)}
+                  placeholder="Enter new username"
+                  className="flex-1"
+                  maxLength={20}
+                  disabled={changeUsernameMutation.isPending}
+                  data-testid="input-new-username"
+                />
+                <Button
+                  size="sm"
+                  onClick={handleUsernameChange}
+                  disabled={changeUsernameMutation.isPending || !newUsername.trim()}
+                  className="bg-green-600 hover:bg-green-700"
+                  data-testid="button-save-username"
+                >
+                  {changeUsernameMutation.isPending ? (
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4" />
+                  )}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleCancelEdit}
+                  disabled={changeUsernameMutation.isPending}
+                  data-testid="button-cancel-username"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                <div>
+                  <p className="font-medium text-foreground" data-testid="text-current-username">
+                    {gameState.username}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    This is how you appear on leaderboards and to other players
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setIsEditingUsername(true)}
+                  data-testid="button-edit-username"
+                >
+                  <Edit3 className="h-4 w-4 mr-1" />
+                  Change
+                </Button>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       <WalletRegistration gameState={{
         ...gameState,

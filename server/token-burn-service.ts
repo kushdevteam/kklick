@@ -1,5 +1,5 @@
 /**
- * Token Burn Service with 20% Dev Tax
+ * Token Burn Service
  * Handles token burning and grow light rewards
  */
 
@@ -189,7 +189,6 @@ const GROW_LIGHT_TEMPLATES: Omit<GrowLight, 'id'>[] = [
 
 interface TokenBurnConfig {
   tokenMintAddress: string;
-  devTaxWallet: string;
   network: 'devnet' | 'mainnet';
   rpcUrl: string;
 }
@@ -219,26 +218,33 @@ class TokenBurnService {
   }
 
   /**
-   * Get available grow lights for a player based on their progress
+   * Get available grow lights for a player based on their lifetime on-chain token burns
    */
   async getAvailableGrowLights(player: Player): Promise<GrowLight[]> {
     const allLights = await storage.getAllGrowLights();
-    return allLights.filter(light => player.totalKush >= light.unlockRequirement);
+    
+    // Get lifetime on-chain burns instead of in-game KUSH
+    const lifetimeBurned = await storage.getPlayerLifetimeBurned(player.id);
+    const availableLights = allLights.filter(light => lifetimeBurned >= light.unlockRequirement);
+    
+    console.log(`🎮 Player ${player.username} stats:`);
+    console.log(`⭐ Points (in-game): ${player.totalKush} (does NOT unlock grow lights)`);
+    console.log(`🔥 On-chain $KUSH burned: ${lifetimeBurned} (unlocks grow lights)`);
+    console.log(`🔓 Unlocked lights: ${availableLights.length}/${allLights.length}`);
+    console.log(`📋 Available: ${availableLights.map(l => `${l.name} (cost: ${l.burnCost}, unlock: ${l.unlockRequirement})`).join(', ')}`);
+    
+    return availableLights;
   }
 
   /**
-   * Calculate dev tax and net burn amount
+   * Calculate burn amount (no dev tax)
    */
   private calculateBurnAmounts(tokenAmount: number): {
-    devTax: number;
-    netBurn: number;
     playerReceives: number;
   } {
-    const devTax = Math.floor(tokenAmount * 0.20); // 20% dev tax
-    const netBurn = tokenAmount - devTax; // 80% gets burned
-    const playerReceives = netBurn; // Player gets grow light based on net amount
+    const playerReceives = tokenAmount; // Player gets full burn amount as grow light value
     
-    return { devTax, netBurn, playerReceives };
+    return { playerReceives };
   }
 
   /**
@@ -248,7 +254,12 @@ class TokenBurnService {
     // Filter lights that player can afford with burned amount
     const affordableLights = availableLights.filter(light => light.burnCost <= burnAmount);
     
+    console.log(`🔍 Selecting grow light for ${burnAmount} tokens burned`);
+    console.log(`📋 Available lights for player: ${availableLights.length}`);
+    console.log(`💰 Affordable lights: ${affordableLights.map(l => `${l.name} (${l.burnCost})`).join(', ')}`);
+    
     if (affordableLights.length === 0) {
+      console.log(`❌ No affordable lights found for ${burnAmount} tokens`);
       return null;
     }
 
@@ -291,7 +302,7 @@ class TokenBurnService {
   }
 
   /**
-   * Process token burn transaction with 20% dev tax
+   * Process token burn transaction
    */
   async burnTokensWithTax(
     playerId: string,
@@ -312,7 +323,7 @@ class TokenBurnService {
       }
 
       // Calculate burn amounts
-      const { devTax, netBurn, playerReceives } = this.calculateBurnAmounts(tokenAmount);
+      const { playerReceives } = this.calculateBurnAmounts(tokenAmount);
       
       // Get available grow lights
       const availableLights = await this.getAvailableGrowLights(player);
@@ -344,8 +355,8 @@ class TokenBurnService {
         growLightReceived: selectedLight.id,
         network: this.config.network,
         burnTransactionSignature: transactionSignature,
-        devTaxAmount: devTax,
-        devTaxRecipient: this.config.devTaxWallet,
+        devTaxAmount: 0,
+        devTaxRecipient: '',
         status: transactionSignature ? 'completed' : 'pending'
       });
 
@@ -444,8 +455,8 @@ class TokenBurnService {
         growLightReceived: selectedLight.id,
         network: this.config.network,
         burnTransactionSignature: transactionSignature,
-        devTaxAmount: Math.floor(burnAmount * 0.2), // Assuming 20% dev tax was already applied
-        devTaxRecipient: this.config.devTaxWallet,
+        devTaxAmount: 0,
+        devTaxRecipient: '',
         status: 'completed'
       });
 
@@ -540,14 +551,14 @@ class TokenBurnService {
 // Export configured instances for devnet and mainnet
 export const devnetBurnService = new TokenBurnService({
   tokenMintAddress: process.env.DEVNET_TOKEN_MINT || '',
-  devTaxWallet: process.env.DEV_TAX_WALLET || 'C3QDmfXPAmtZgoVCLDvXkuFm5tR95TkXDZGBVYUtqCUL',
+
   network: 'devnet',
   rpcUrl: process.env.SOLANA_DEVNET_RPC || 'https://api.devnet.solana.com'
 });
 
 export const mainnetBurnService = new TokenBurnService({
   tokenMintAddress: process.env.MAINNET_TOKEN_MINT || '',
-  devTaxWallet: process.env.DEV_TAX_WALLET || 'C3QDmfXPAmtZgoVCLDvXkuFm5tR95TkXDZGBVYUtqCUL',
+
   network: 'mainnet',
   rpcUrl: process.env.SOLANA_MAINNET_RPC || 'https://api.mainnet-beta.solana.com'
 });

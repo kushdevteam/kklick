@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,10 +6,13 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Eye, EyeOff } from 'lucide-react';
 
 interface WalletRegistrationProps {
   gameState: {
     id: string;
+    username?: string;
     walletAddress?: string | null;
     walletLinked?: boolean;
     solanaNetwork?: string;
@@ -19,7 +22,12 @@ interface WalletRegistrationProps {
 }
 
 export default function WalletRegistration({ gameState }: WalletRegistrationProps) {
-  const [walletAddress, setWalletAddress] = useState(gameState.walletAddress || '');
+  const [walletAddress, setWalletAddress] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [authMode, setAuthMode] = useState<'register' | 'login'>('register');
+  const [isRegistered, setIsRegistered] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -29,64 +37,111 @@ export default function WalletRegistration({ gameState }: WalletRegistrationProp
   const tgData = tgWebApp?.initDataUnsafe;
   const telegramUser = tgData?.user;
 
-  const linkWalletMutation = useMutation({
-    mutationFn: async (newWalletAddress: string) => {
-      const response = await fetch(`/api/players/${gameState.id}/link-wallet`, {
+  // Check wallet registration status
+  useEffect(() => {
+    if (walletAddress.trim() && /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(walletAddress.trim())) {
+      fetch(`/api/auth/wallet/${walletAddress.trim()}`)
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            setIsRegistered(data.data.isRegistered);
+            setAuthMode(data.data.isRegistered ? 'login' : 'register');
+          }
+        })
+        .catch(() => {
+          setIsRegistered(false);
+        });
+    }
+  }, [walletAddress]);
+
+  // Wallet registration mutation
+  const registerWalletMutation = useMutation({
+    mutationFn: async ({ walletAddress, password, username }: { walletAddress: string; password: string; username?: string }) => {
+      const response = await fetch('/api/auth/wallet/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          walletAddress: newWalletAddress,
+          walletAddress: walletAddress.trim(),
+          password,
+          username: username || gameState.username || `player_${Date.now()}`,
         }),
       });
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to link wallet');
+        throw new Error(errorData.message || 'Failed to register wallet');
       }
       return await response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast({
-        title: "✅ Wallet Linked!",
-        description: "Your Solana wallet has been securely linked to your account. This cannot be changed for security.",
+        title: "✅ Wallet Registered!",
+        description: "Your wallet has been registered with password protection. You can now log in securely.",
       });
+      setPassword('');
+      setConfirmPassword('');
+      setIsRegistered(true);
+      setAuthMode('login');
       queryClient.invalidateQueries({ queryKey: ['/api/players', gameState.id] });
     },
     onError: (error: any) => {
       toast({
-        title: "❌ Linking Failed",
-        description: error.message || "Failed to link wallet address.",
+        title: "❌ Registration Failed",
+        description: error.message || "Failed to register wallet.",
         variant: "destructive",
       });
     },
   });
 
-  // Remove wallet mutation - only available if wallet not yet linked
-  const removeWalletMutation = useMutation({
-    mutationFn: async () => {
-      if (gameState.walletLinked) {
-        throw new Error('Cannot remove linked wallet for security reasons');
-      }
-      const response = await fetch(`/api/players/${gameState.id}`, {
-        method: 'PATCH',
+  // Wallet login mutation
+  const loginWalletMutation = useMutation({
+    mutationFn: async ({ walletAddress, password }: { walletAddress: string; password: string }) => {
+      const response = await fetch('/api/auth/wallet/login', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          walletAddress: null,
+          walletAddress: walletAddress.trim(),
+          password,
         }),
       });
-      if (!response.ok) throw new Error('Failed to remove wallet');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to login');
+      }
       return await response.json();
     },
-    onSuccess: () => {
-      setWalletAddress('');
+    onSuccess: (data) => {
       toast({
-        title: "✅ Wallet Removed",
-        description: "Your wallet address has been removed from your account.",
+        title: "✅ Login Successful!",
+        description: `Welcome back! Your wallet is now linked to your account.`,
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/players', gameState.id] });
+      setPassword('');
+      // Update player with wallet linked
+      if (data.data.playerId) {
+        queryClient.invalidateQueries({ queryKey: ['/api/players', gameState.id] });
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: "❌ Login Failed",
+        description: error.message || "Invalid wallet address or password.",
+        variant: "destructive",
+      });
     },
   });
 
-  const handleLinkWallet = () => {
+  // Password validation helper
+  const validatePassword = (password: string): { valid: boolean; errors: string[] } => {
+    const errors: string[] = [];
+    if (password.length < 8) errors.push('Must be at least 8 characters');
+    if (!/[a-z]/.test(password)) errors.push('Must contain lowercase letter');
+    if (!/[A-Z]/.test(password)) errors.push('Must contain uppercase letter');
+    if (!/\d/.test(password)) errors.push('Must contain number');
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) errors.push('Must contain special character');
+    return { valid: errors.length === 0, errors };
+  };
+
+  const handleWalletAuth = () => {
+    // Validate wallet address
     if (!walletAddress.trim()) {
       toast({
         title: "❌ Invalid Address",
@@ -96,7 +151,6 @@ export default function WalletRegistration({ gameState }: WalletRegistrationProp
       return;
     }
 
-    // Basic Solana address validation (base58, 32-44 characters)
     const solanaAddressPattern = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
     if (!solanaAddressPattern.test(walletAddress.trim())) {
       toast({
@@ -107,7 +161,42 @@ export default function WalletRegistration({ gameState }: WalletRegistrationProp
       return;
     }
 
-    linkWalletMutation.mutate(walletAddress.trim());
+    // Validate password
+    if (!password.trim()) {
+      toast({
+        title: "❌ Password Required",
+        description: "Please enter your password.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (authMode === 'register') {
+      // Validate password strength for registration
+      const passwordValidation = validatePassword(password);
+      if (!passwordValidation.valid) {
+        toast({
+          title: "❌ Password Too Weak",
+          description: passwordValidation.errors.join(', '),
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Check password confirmation
+      if (password !== confirmPassword) {
+        toast({
+          title: "❌ Passwords Don't Match",
+          description: "Please make sure both passwords match.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      registerWalletMutation.mutate({ walletAddress, password });
+    } else {
+      loginWalletMutation.mutate({ walletAddress, password });
+    }
   };
 
   const linkTelegramMutation = useMutation({
@@ -154,156 +243,195 @@ export default function WalletRegistration({ gameState }: WalletRegistrationProp
     });
   };
 
+  const isLoading = registerWalletMutation.isPending || loginWalletMutation.isPending;
+
   return (
     <Card className="bg-card/50 border-border">
       <CardHeader>
         <CardTitle className="flex items-center space-x-2">
           <i className="fas fa-wallet text-blue-400"></i>
-          <span>{gameState.walletLinked ? 'Linked Wallet' : 'Link Wallet'}</span>
+          <span>{gameState.walletLinked ? 'Linked Wallet' : 'Secure Wallet Authentication'}</span>
         </CardTitle>
         <CardDescription>
           {gameState.walletLinked 
-            ? 'Your wallet is securely linked to your account. Each account can only link one wallet for security.'
-            : 'Link your Solana wallet address to receive token rewards. Once linked, this cannot be changed for security reasons.'
+            ? 'Your wallet is securely linked to your account with password protection.'
+            : 'Register your Solana wallet with password protection to securely receive token rewards.'
           }
         </CardDescription>
       </CardHeader>
       
       <CardContent className="space-y-4">
-        {/* Trust Message */}
-        <Alert className={gameState.walletLinked 
-          ? "bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800"
-          : "bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800"
-        }>
-          <i className={`fas ${gameState.walletLinked ? 'fa-lock text-blue-600 dark:text-blue-400' : 'fa-shield-alt text-green-600 dark:text-green-400'}`}></i>
-          <AlertDescription className={gameState.walletLinked 
-            ? "text-blue-800 dark:text-blue-200"
-            : "text-green-800 dark:text-green-200"
-          }>
-            {gameState.walletLinked 
-              ? <><strong>Wallet Linked:</strong> Your wallet is permanently linked for security. This prevents exploitation and ensures only you control your rewards.</>
-              : <><strong>Safe & Secure:</strong> We only store your wallet address - we never connect to or access your wallet. No permissions, no transactions, just your address for future rewards.</>
-            }
-          </AlertDescription>
-        </Alert>
+        {/* Already linked wallet display */}
+        {gameState.walletLinked && gameState.walletAddress && (
+          <Alert className="bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
+            <i className="fas fa-lock text-blue-600 dark:text-blue-400"></i>
+            <AlertDescription className="text-blue-800 dark:text-blue-200">
+              <strong>Wallet Linked:</strong> Your wallet is securely linked with password protection.
+              <br />
+              <span className="font-mono text-xs">{gameState.walletAddress}</span>
+            </AlertDescription>
+          </Alert>
+        )}
 
-        <div className="space-y-2">
-          <Label htmlFor="wallet-address">Solana Wallet Address</Label>
-          <div className="flex space-x-2">
-            <Input
-              id="wallet-address"
-              placeholder={gameState.walletLinked 
-                ? "Wallet permanently linked"
-                : "Enter your Solana wallet address (e.g., 7dHbW...)"
-              }
-              value={walletAddress}
-              onChange={(e) => setWalletAddress(e.target.value)}
-              className="font-mono text-sm"
-              disabled={gameState.walletLinked}
-              data-testid="input-wallet-address"
-            />
-            {gameState.walletLinked ? (
-              <Button
-                disabled
-                size="sm"
-                variant="outline"
-                data-testid="button-wallet-linked"
-              >
-                <i className="fas fa-lock mr-2"></i>
-                Linked
-              </Button>
-            ) : gameState.walletAddress ? (
-              <div className="flex space-x-2">
+        {/* Wallet authentication form for non-linked wallets */}
+        {!gameState.walletLinked && (
+          <>
+            {/* Trust Message */}
+            <Alert className="bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800">
+              <i className="fas fa-shield-alt text-green-600 dark:text-green-400"></i>
+              <AlertDescription className="text-green-800 dark:text-green-200">
+                <strong>Enhanced Security:</strong> Your wallet is protected with password authentication. We never access your wallet directly.
+              </AlertDescription>
+            </Alert>
+
+            <Tabs value={authMode} onValueChange={(value) => setAuthMode(value as 'register' | 'login')}>
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="register" disabled={isRegistered}>
+                  Register Wallet
+                </TabsTrigger>
+                <TabsTrigger value="login">
+                  Login
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="register" className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="register-wallet-address">Solana Wallet Address</Label>
+                  <Input
+                    id="register-wallet-address"
+                    placeholder="Enter your Solana wallet address (e.g., 7dHbW...)"
+                    value={walletAddress}
+                    onChange={(e) => setWalletAddress(e.target.value)}
+                    className="font-mono text-sm"
+                    data-testid="input-register-wallet-address"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="register-password">Create Password</Label>
+                  <div className="relative">
+                    <Input
+                      id="register-password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Create a strong password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      data-testid="input-register-password"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3 py-2"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Must contain uppercase, lowercase, number, and special character
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="confirm-password">Confirm Password</Label>
+                  <Input
+                    id="confirm-password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Confirm your password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    data-testid="input-confirm-password"
+                  />
+                </div>
+
                 <Button
-                  onClick={() => removeWalletMutation.mutate()}
-                  disabled={removeWalletMutation.isPending}
-                  variant="outline"
-                  size="sm"
-                  data-testid="button-remove-wallet"
+                  onClick={handleWalletAuth}
+                  disabled={isLoading || !walletAddress || !password || !confirmPassword}
+                  className="w-full"
+                  data-testid="button-register-wallet"
                 >
-                  {removeWalletMutation.isPending ? (
+                  {isLoading ? (
                     <>
                       <i className="fas fa-spinner fa-spin mr-2"></i>
-                      Removing...
+                      Registering...
                     </>
                   ) : (
                     <>
-                      <i className="fas fa-trash mr-2"></i>
-                      Remove
+                      <i className="fas fa-user-plus mr-2"></i>
+                      Register Wallet
                     </>
                   )}
                 </Button>
+              </TabsContent>
+
+              <TabsContent value="login" className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="login-wallet-address">Solana Wallet Address</Label>
+                  <Input
+                    id="login-wallet-address"
+                    placeholder="Enter your registered wallet address"
+                    value={walletAddress}
+                    onChange={(e) => setWalletAddress(e.target.value)}
+                    className="font-mono text-sm"
+                    data-testid="input-login-wallet-address"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="login-password">Password</Label>
+                  <div className="relative">
+                    <Input
+                      id="login-password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Enter your password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      data-testid="input-login-password"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3 py-2"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                </div>
+
                 <Button
-                  onClick={handleLinkWallet}
-                  disabled={linkWalletMutation.isPending}
-                  size="sm"
-                  data-testid="button-link-wallet"
+                  onClick={handleWalletAuth}
+                  disabled={isLoading || !walletAddress || !password}
+                  className="w-full"
+                  data-testid="button-login-wallet"
                 >
-                  {linkWalletMutation.isPending ? (
+                  {isLoading ? (
                     <>
                       <i className="fas fa-spinner fa-spin mr-2"></i>
-                      Linking...
+                      Logging in...
                     </>
                   ) : (
                     <>
-                      <i className="fas fa-link mr-2"></i>
-                      Link Permanently
+                      <i className="fas fa-sign-in-alt mr-2"></i>
+                      Login to Wallet
                     </>
                   )}
                 </Button>
-              </div>
-            ) : (
-              <Button
-                onClick={handleLinkWallet}
-                disabled={linkWalletMutation.isPending}
-                data-testid="button-link-wallet"
-              >
-                {linkWalletMutation.isPending ? (
-                  <>
-                    <i className="fas fa-spinner fa-spin mr-2"></i>
-                    Linking...
-                  </>
-                ) : (
-                  <>
-                    <i className="fas fa-link mr-2"></i>
-                    Link Wallet
-                  </>
-                )}
-              </Button>
-            )}
-          </div>
-        </div>
+              </TabsContent>
+            </Tabs>
+          </>
+        )}
 
-        {gameState.walletAddress && (
-          <div className={`p-3 rounded-lg ${
-            gameState.walletLinked 
-              ? 'bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800'
-              : 'bg-muted/50'
-          }`}>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-foreground">
-                  {gameState.walletLinked ? 'Permanently Linked Address:' : 'Current Address (Not Linked):'}
-                </p>
-                <p className="text-xs font-mono text-muted-foreground break-all">
-                  {gameState.walletAddress}
-                </p>
-              </div>
-              <div className={gameState.walletLinked 
-                ? "text-blue-600 dark:text-blue-400"
-                : "text-amber-600 dark:text-amber-400"
-              }>
-                <i className={`fas ${
-                  gameState.walletLinked ? 'fa-lock' : 'fa-exclamation-triangle'
-                }`}></i>
-              </div>
-            </div>
-            {!gameState.walletLinked && (
-              <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
-                <strong>Note:</strong> Address not yet linked. Click "Link Permanently" to secure your wallet.
-              </p>
-            )}
-          </div>
+        {/* Status indicator for registered but not linked */}
+        {isRegistered && !gameState.walletLinked && walletAddress && (
+          <Alert className="bg-yellow-50 dark:bg-yellow-950 border-yellow-200 dark:border-yellow-800">
+            <i className="fas fa-key text-yellow-600 dark:text-yellow-400"></i>
+            <AlertDescription className="text-yellow-800 dark:text-yellow-200">
+              <strong>Wallet Registered:</strong> Please log in to link this wallet to your account.
+            </AlertDescription>
+          </Alert>
         )}
 
         {/* Platform Linking Options */}

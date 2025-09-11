@@ -35,7 +35,7 @@ export default function Landing() {
               <div className="absolute inset-0 rounded-full border-4 border-primary/20"></div>
               <div className="absolute inset-0 rounded-full border-4 border-primary border-t-transparent animate-spin"></div>
               <div className="absolute inset-2 rounded-full bg-primary/10 flex items-center justify-center">
-                <i className="fas fa-cannabis text-2xl text-primary"></i>
+                <img src="/favicon.png?v=092025" alt="KUSH Character" className="w-8 h-8 object-contain" />
               </div>
             </div>
           </div>
@@ -86,7 +86,7 @@ export default function Landing() {
         {/* Logo/Title Section */}
         <div className="mb-8">
           <div className="inline-flex items-center justify-center w-24 h-24 mb-6 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 border-2 border-primary/30">
-            <i className="fas fa-cannabis text-4xl text-primary"></i>
+            <img src="/favicon.png?v=092025" alt="KUSH Character" className="w-12 h-12 object-contain" />
           </div>
           
           <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold mb-3 sm:mb-4 leading-tight">
@@ -151,8 +151,18 @@ export default function Landing() {
           </p>
         </div>
 
-        {/* Whitepaper & Roadmap Buttons */}
+        {/* Secondary Action Buttons */}
         <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row justify-center gap-2 sm:gap-3">
+          <a 
+            href="https://pump.fun/" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="w-full sm:w-auto bg-gradient-to-r from-yellow-500 to-orange-500 text-white hover:from-yellow-600 hover:to-orange-600 px-4 py-3 sm:py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:scale-105 active:scale-95 min-h-[44px] touch-manipulation text-center"
+            data-testid="button-buy-pump"
+          >
+            <i className="fas fa-coins mr-2"></i>
+            Buy Token
+          </a>
           <Link href="/whitepaper">
             <button 
               className="w-full sm:w-auto bg-card/40 backdrop-blur-sm border border-primary/30 text-primary hover:bg-primary/10 px-4 py-3 sm:py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:scale-105 active:scale-95 min-h-[44px] touch-manipulation"
@@ -160,15 +170,6 @@ export default function Landing() {
             >
               <i className="fas fa-file-alt mr-2"></i>
               Whitepaper
-            </button>
-          </Link>
-          <Link href="/roadmap">
-            <button 
-              className="w-full sm:w-auto bg-card/40 backdrop-blur-sm border border-primary/30 text-primary hover:bg-primary/10 px-4 py-3 sm:py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:scale-105 active:scale-95 min-h-[44px] touch-manipulation"
-              data-testid="button-roadmap"
-            >
-              <i className="fas fa-map mr-2"></i>
-              Roadmap
             </button>
           </Link>
         </div>

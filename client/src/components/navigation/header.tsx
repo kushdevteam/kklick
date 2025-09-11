@@ -1,6 +1,8 @@
-import { useState } from "react";
-import logoUrl from "@/assets/logo.png";
+import { useState, useEffect } from "react";
+import logoUrl from "@/assets/character-logo.png";
 import { Link } from 'wouter';
+import { SoundToggle } from "@/components/ui/sound-toggle";
+import { startBackgroundMusic, isSoundEnabled, isBackgroundMusicEnabled } from "@/lib/game-utils";
 
 type GameSection = 'game' | 'upgrades' | 'achievements' | 'leaderboard' | 'wallet' | 'referral';
 
@@ -12,6 +14,30 @@ interface HeaderProps {
 export default function Header({ currentSection, onSectionChange }: HeaderProps = {}) {
   const [walletConnected, setWalletConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
+
+  // Start background music when header loads (app initialization)
+  useEffect(() => {
+    const initializeBackgroundMusic = () => {
+      if (isSoundEnabled() && isBackgroundMusicEnabled()) {
+        setTimeout(() => startBackgroundMusic(), 2000); // Delay for user interaction
+      }
+    };
+
+    // Listen for first user interaction to start audio
+    const handleUserInteraction = () => {
+      initializeBackgroundMusic();
+      document.removeEventListener('click', handleUserInteraction);
+      document.removeEventListener('touchstart', handleUserInteraction);
+    };
+
+    document.addEventListener('click', handleUserInteraction);
+    document.addEventListener('touchstart', handleUserInteraction);
+
+    return () => {
+      document.removeEventListener('click', handleUserInteraction);
+      document.removeEventListener('touchstart', handleUserInteraction);
+    };
+  }, []);
 
   const handleConnectWallet = async () => {
     setIsConnecting(true);
@@ -29,7 +55,7 @@ export default function Header({ currentSection, onSectionChange }: HeaderProps 
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="w-12 h-12 rounded-lg flex items-center justify-center">
-              <img src={logoUrl} alt="KushKlicker Logo" className="w-12 h-12 object-contain" />
+              <img src={`${logoUrl}?v=092025`} alt="KushKlicker Logo" className="w-12 h-12 object-contain" />
             </div>
             <div>
               <h1 className="text-xl font-bold text-foreground" data-testid="text-game-title">Kush Klicker</h1>
@@ -58,13 +84,10 @@ export default function Header({ currentSection, onSectionChange }: HeaderProps 
                   <i className="fas fa-file-alt mr-1"></i> Docs
                 </button>
               </Link>
-              <Link href="/roadmap">
-                <button className="text-muted-foreground hover:text-foreground transition-colors" data-testid="link-roadmap">
-                  <i className="fas fa-road mr-1"></i> Roadmap
-                </button>
-              </Link>
             </div>
             
+            {/* Sound Toggle */}
+            <SoundToggle className="ml-2" />
           </div>
         </div>
       </div>

@@ -724,6 +724,7 @@ function TokenBurnInterface({ gameState }: TokenBurnInterfaceProps) {
       setPendingBurnTx('');
       queryClient.invalidateQueries({ queryKey: ['player-grow-lights', gameState.id] });
       queryClient.invalidateQueries({ queryKey: ['player', gameState.id] });
+      queryClient.invalidateQueries({ queryKey: ['burn-stats', gameState.id] });
     },
     onError: (error: any) => {
       toast({
@@ -779,10 +780,21 @@ function TokenBurnInterface({ gameState }: TokenBurnInterfaceProps) {
     });
   };
 
-  // Filter grow lights that player can afford
-  const affordableGrowLights = growLights.filter(light => 
-    light.burnCost <= burnAmount && light.unlockRequirement <= gameState.totalKush
-  );
+  // Fetch player's burn stats to determine unlocked grow lights
+  const { data: burnStats } = useQuery({
+    queryKey: ['burn-stats', gameState.id],
+    queryFn: async () => {
+      const response = await fetch(`/api/players/${gameState.id}/burn-stats`);
+      if (!response.ok) throw new Error('Failed to fetch burn stats');
+      return response.json();
+    },
+  });
+
+  // Filter grow lights that player can afford and has unlocked
+  const affordableGrowLights = growLights.filter(light => {
+    const lifetimeBurned = burnStats?.onChainKushBurned || 0;
+    return light.burnCost <= burnAmount && light.unlockRequirement <= lifetimeBurned;
+  });
 
   // Get rarity color
   const getRarityColor = (rarity: string) => {
@@ -810,7 +822,8 @@ function TokenBurnInterface({ gameState }: TokenBurnInterfaceProps) {
             Burn Tokens for Grow Lights
           </CardTitle>
           <CardDescription>
-            Burn your KUSH tokens to receive grow lights that provide passive income and click bonuses
+            Burn your on-chain $KUSH tokens to receive grow lights that provide passive income and click bonuses.<br/>
+            <strong className="text-orange-400">⚠️ Important:</strong> Grow lights are unlocked by burning on-chain $KUSH tokens, NOT by in-game Points!
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">

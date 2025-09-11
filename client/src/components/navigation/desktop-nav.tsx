@@ -7,7 +7,7 @@ interface DesktopNavProps {
 
 export default function DesktopNav({ currentSection, onSectionChange }: DesktopNavProps) {
   const navItems = [
-    { id: 'game', icon: 'fas fa-cannabis' },
+    { id: 'game', icon: 'logo' },
     { id: 'upgrades', icon: 'fas fa-bolt' },
     { id: 'achievements', icon: 'fas fa-trophy' },
     { id: 'leaderboard', icon: 'fas fa-crown' },
@@ -34,7 +34,11 @@ export default function DesktopNav({ currentSection, onSectionChange }: DesktopN
             className={`nav-btn ${currentSection === item.id ? 'active' : ''}`}
             data-testid={`nav-${item.id}`}
           >
-            <i className={`${item.icon} text-xl`}></i>
+            {item.icon === 'logo' ? (
+              <img src="/favicon.png?v=092025" alt="KUSH Character" className="w-6 h-6 object-contain" />
+            ) : (
+              <i className={`${item.icon} text-xl`}></i>
+            )}
           </button>
         ))}
       </div>

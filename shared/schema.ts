@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, timestamp, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, timestamp, boolean, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -30,7 +30,16 @@ export const players = pgTable("players", {
   lastPassiveUpdate: timestamp("last_passive_update"),
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
   lastActive: timestamp("last_active").notNull().default(sql`now()`),
-});
+}, (table) => ({
+  // Performance indexes for 1000+ players
+  usernameIdx: index("players_username_idx").on(table.username),
+  telegramUserIdIdx: index("players_telegram_user_id_idx").on(table.telegramUserId),
+  discordUserIdIdx: index("players_discord_user_id_idx").on(table.discordUserId),
+  walletAddressIdx: index("players_wallet_address_idx").on(table.walletAddress),
+  totalKushIdx: index("players_total_kush_idx").on(table.totalKush),
+  lastActiveIdx: index("players_last_active_idx").on(table.lastActive),
+  levelPrestigeIdx: index("players_level_prestige_idx").on(table.level, table.prestige),
+}));
 
 export const upgrades = pgTable("upgrades", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -51,7 +60,12 @@ export const playerUpgrades = pgTable("player_upgrades", {
   upgradeId: text("upgrade_id").notNull(),
   quantity: integer("quantity").notNull().default(0),
   purchasedAt: timestamp("purchased_at").notNull().default(sql`now()`),
-});
+}, (table) => ({
+  // Performance indexes 
+  playerIdIdx: index("player_upgrades_player_id_idx").on(table.playerId),
+  upgradeIdIdx: index("player_upgrades_upgrade_id_idx").on(table.upgradeId),
+  playerUpgradeIdx: index("player_upgrades_player_upgrade_idx").on(table.playerId, table.upgradeId),
+}));
 
 export const achievements = pgTable("achievements", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -70,7 +84,13 @@ export const playerAchievements = pgTable("player_achievements", {
   completed: boolean("completed").notNull().default(false),
   progress: integer("progress").notNull().default(0),
   completedAt: timestamp("completed_at"),
-});
+}, (table) => ({
+  // Performance indexes for achievements
+  playerIdIdx: index("player_achievements_player_id_idx").on(table.playerId),
+  achievementIdIdx: index("player_achievements_achievement_id_idx").on(table.achievementId),
+  completedIdx: index("player_achievements_completed_idx").on(table.completed),
+  playerCompletedIdx: index("player_achievements_player_completed_idx").on(table.playerId, table.completed),
+}));
 
 export const tokenPayouts = pgTable("token_payouts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -83,7 +103,31 @@ export const tokenPayouts = pgTable("token_payouts", {
   status: text("status").notNull().default("pending"), // pending, completed, failed
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
   processedAt: timestamp("processed_at"),
-});
+}, (table) => ({
+  // Performance indexes for token operations
+  playerIdIdx: index("token_payouts_player_id_idx").on(table.playerId),
+  statusIdx: index("token_payouts_status_idx").on(table.status),
+  networkIdx: index("token_payouts_network_idx").on(table.network),
+  createdAtIdx: index("token_payouts_created_at_idx").on(table.createdAt),
+  walletAddressIdx: index("token_payouts_wallet_address_idx").on(table.walletAddress),
+  statusNetworkIdx: index("token_payouts_status_network_idx").on(table.status, table.network),
+}));
+
+// Wallet Authentication table for secure login
+export const walletAuth = pgTable("wallet_auth", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  walletAddress: text("wallet_address").notNull().unique(),
+  passwordHash: text("password_hash").notNull(),
+  playerId: text("player_id"), // Link to player who owns this wallet
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  lastLogin: timestamp("last_login"),
+}, (table) => ({
+  // Performance indexes for wallet authentication
+  walletAddressIdx: index("wallet_auth_wallet_address_idx").on(table.walletAddress),
+  playerIdIdx: index("wallet_auth_player_id_idx").on(table.playerId),
+  activeIdx: index("wallet_auth_active_idx").on(table.isActive),
+}));
 
 export const growLights = pgTable("grow_lights", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -116,8 +160,8 @@ export const tokenBurns = pgTable("token_burns", {
   growLightReceived: text("grow_light_id"),
   network: text("network").notNull(),
   burnTransactionSignature: text("burn_transaction_signature"),
-  devTaxAmount: integer("dev_tax_amount").notNull(), // 20% dev tax
-  devTaxRecipient: text("dev_tax_recipient").notNull(),
+  devTaxAmount: integer("dev_tax_amount").notNull().default(0), // No dev tax
+  devTaxRecipient: text("dev_tax_recipient").notNull().default(''),
   status: text("status").notNull().default("pending"),
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
   processedAt: timestamp("processed_at"),
@@ -167,7 +211,15 @@ export const friendships = pgTable("friendships", {
   status: text("status").notNull().default("pending"), // pending, accepted, blocked
   requestedAt: timestamp("requested_at").notNull().default(sql`now()`),
   acceptedAt: timestamp("accepted_at"),
-});
+}, (table) => ({
+  // Critical indexes for friend system performance
+  playerIdIdx: index("friendships_player_id_idx").on(table.playerId),
+  friendIdIdx: index("friendships_friend_id_idx").on(table.friendId),
+  statusIdx: index("friendships_status_idx").on(table.status),
+  playerStatusIdx: index("friendships_player_status_idx").on(table.playerId, table.status),
+  friendStatusIdx: index("friendships_friend_status_idx").on(table.friendId, table.status),
+  requestedAtIdx: index("friendships_requested_at_idx").on(table.requestedAt),
+}));
 
 export const friendGifts = pgTable("friend_gifts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -1084,6 +1136,12 @@ export const insertTokenBurnSchema = createInsertSchema(tokenBurns).omit({
   createdAt: true,
 });
 
+export const insertWalletAuthSchema = createInsertSchema(walletAuth).omit({
+  id: true,
+  createdAt: true,
+  lastLogin: true,
+});
+
 export type InsertPlayer = z.infer<typeof insertPlayerSchema>;
 export type Player = typeof players.$inferSelect;
 export type InsertUpgrade = z.infer<typeof insertUpgradeSchema>;
@@ -1102,3 +1160,5 @@ export type InsertPlayerGrowLight = z.infer<typeof insertPlayerGrowLightSchema>;
 export type PlayerGrowLight = typeof playerGrowLights.$inferSelect;
 export type InsertTokenBurn = z.infer<typeof insertTokenBurnSchema>;
 export type TokenBurn = typeof tokenBurns.$inferSelect;
+export type InsertWalletAuth = z.infer<typeof insertWalletAuthSchema>;
+export type WalletAuth = typeof walletAuth.$inferSelect;

@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { isValidSolanaAddress } from '@/lib/solana-config';
+import type { Player } from '@shared/schema';
 
 interface TutorialStep {
   id: number;
@@ -33,12 +34,12 @@ export default function NewUserTutorial({ refetchGameState }: NewUserTutorialPro
   const queryClient = useQueryClient();
 
   // Fetch player data and upgrades
-  const { data: gameState } = useQuery({
+  const { data: gameState } = useQuery<Player>({
     queryKey: ['/api/players', playerId],
     enabled: !!playerId,
   });
 
-  const { data: playerUpgrades = [] } = useQuery({
+  const { data: playerUpgrades = [] } = useQuery<any[]>({
     queryKey: ['/api/players', playerId, 'upgrades'],
     enabled: !!playerId,
   });
@@ -62,8 +63,8 @@ export default function NewUserTutorial({ refetchGameState }: NewUserTutorialPro
     },
     {
       id: 3,
-      title: "Link Your Wallet (Required)",
-      description: "Connect your Solana wallet to receive real token rewards. This is required to continue!",
+      title: "Link Your Wallet (Optional)",
+      description: "Connect your Solana wallet to receive real token rewards. You can do this later if you prefer!",
       icon: "fa-wallet",
       reward: 500,
       action: "wallet",
@@ -126,7 +127,7 @@ export default function NewUserTutorial({ refetchGameState }: NewUserTutorialPro
           return { ...step, completed: true };
         }
         
-        // Step 3: Wallet linked (now required step 3)
+        // Step 3: Wallet linked (now optional step 3)
         if (index === 2 && gameState.walletLinked && !step.completed) {
           shouldUpdate = true;
           if (currentStep === 2) {
@@ -135,8 +136,8 @@ export default function NewUserTutorial({ refetchGameState }: NewUserTutorialPro
           return { ...step, completed: true };
         }
         
-        // Step 4: Check stats (auto-complete after wallet linked)
-        if (index === 3 && gameState.walletLinked && !step.completed) {
+        // Step 4: Check stats (auto-complete always)
+        if (index === 3 && !step.completed) {
           shouldUpdate = true;
           if (currentStep === 3) {
             setTimeout(() => handleStepComplete(3), 2000);
@@ -201,6 +202,33 @@ export default function NewUserTutorial({ refetchGameState }: NewUserTutorialPro
 
   const completeTutorial = async () => {
     try {
+      // First, claim the final step reward (5000 KUSH) if not already claimed
+      const finalStep = tutorialSteps[tutorialSteps.length - 1];
+      if (finalStep && finalStep.reward && gameState?.id) {
+        try {
+          const rewardResponse = await fetch('/api/players/tutorial-reward', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              playerId: gameState.id,
+              reward: finalStep.reward,
+              stepId: finalStep.id
+            })
+          });
+          
+          if (rewardResponse.ok) {
+            toast({
+              title: "🎉 Final Tutorial Reward!",
+              description: `Earned ${finalStep.reward} KUSH for completing the tutorial!`,
+              duration: 4000,
+            });
+          }
+        } catch (error) {
+          console.log('Final reward already claimed or error:', error);
+        }
+      }
+
+      // Then mark tutorial as completed
       const response = await fetch(`/api/players/${gameState.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -293,16 +321,7 @@ export default function NewUserTutorial({ refetchGameState }: NewUserTutorialPro
   };
 
   const handleNextStep = () => {
-    // For wallet step, ensure wallet is linked before proceeding
-    if (currentStep === 2 && !gameState.walletLinked) {
-      toast({
-        title: "⚠️ Wallet Required",
-        description: "Please link your Solana wallet to continue with the tutorial.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
+    // Wallet step is now optional - user can skip it
     if (currentStep < tutorialSteps.length - 1) {
       setCurrentStep(currentStep + 1);
     } else {
@@ -345,8 +364,8 @@ export default function NewUserTutorial({ refetchGameState }: NewUserTutorialPro
                 <div className="flex items-start space-x-2">
                   <i className="fas fa-info-circle text-accent text-sm mt-0.5"></i>
                   <div className="text-xs text-foreground">
-                    <p><strong>Required:</strong> Enter your Solana wallet address to receive real token rewards for achievements and milestones.</p>
-                    <p className="mt-1"><strong>Security:</strong> This can only be set once for security reasons.</p>
+                    <p><strong>Optional:</strong> Enter your Solana wallet address to receive real token rewards for achievements and milestones.</p>
+                    <p className="mt-1"><strong>Security:</strong> This can only be set once for security reasons. You can also skip this and link later!</p>
                   </div>
                 </div>
               </div>
@@ -392,23 +411,18 @@ export default function NewUserTutorial({ refetchGameState }: NewUserTutorialPro
           )}
           
           <div className="flex gap-2">
-            {/* Only allow skipping after wallet is linked */}
-            {gameState.walletLinked && (
-              <Button 
-                variant="outline" 
-                className="flex-1"
-                onClick={skipTutorial}
-              >
-                Skip Tutorial
-              </Button>
-            )}
             <Button 
-              className={!gameState.walletLinked ? 'w-full' : 'flex-1'}
-              onClick={handleNextStep}
-              disabled={step.action === 'wallet' && !step.completed}
+              variant="outline" 
+              className="flex-1"
+              onClick={skipTutorial}
             >
-              {currentStep === tutorialSteps.length - 1 ? 'Complete!' : 
-               step.action === 'wallet' && !step.completed ? 'Waiting...' : 'Next'}
+              Skip Tutorial
+            </Button>
+            <Button 
+              className="flex-1"
+              onClick={handleNextStep}
+            >
+              {currentStep === tutorialSteps.length - 1 ? 'Complete!' : 'Next'}
             </Button>
           </div>
           

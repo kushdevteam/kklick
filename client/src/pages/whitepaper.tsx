@@ -23,12 +23,6 @@ export default function Whitepaper() {
             Back to Game
           </Button>
         </Link>
-        <Link href="/roadmap">
-          <Button variant="default">
-            <i className="fas fa-road mr-2"></i>
-            View Roadmap
-          </Button>
-        </Link>
       </div>
 
       <div className="space-y-8">
@@ -365,17 +359,11 @@ export default function Whitepaper() {
 
       {/* Footer Navigation */}
       <div className="text-center mt-12 pt-8 border-t border-border">
-        <div className="flex justify-center space-x-4">
+        <div className="flex justify-center">
           <Link href="/">
             <Button variant="outline">
               <i className="fas fa-gamepad mr-2"></i>
               Play Game
-            </Button>
-          </Link>
-          <Link href="/roadmap">
-            <Button variant="default">
-              <i className="fas fa-road mr-2"></i>
-              View Roadmap
             </Button>
           </Link>
         </div>

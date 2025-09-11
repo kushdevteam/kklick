@@ -10,6 +10,8 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Wallet, ExternalLink, AlertCircle, Clock, CheckCircle, Gift, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { KushLoadingSpinner, LoadingSpinner } from "@/components/ui/loading-spinner";
+import { EnhancedButton } from "@/components/ui/enhanced-button";
 
 interface PendingPayout {
   id: string;
@@ -115,8 +117,8 @@ export function SolanaWallet({ gameState, playerId }: SolanaWalletProps) {
             Token Rewards
           </CardTitle>
         </CardHeader>
-        <CardContent className="flex items-center justify-center py-8">
-          <Loader2 className="h-6 w-6 animate-spin" />
+        <CardContent className="flex flex-col items-center justify-center py-8 space-y-4">
+          <KushLoadingSpinner size="lg" text="Loading your token rewards..." />
         </CardContent>
       </Card>
     );

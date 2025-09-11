@@ -4,6 +4,7 @@ import { apiRequest } from "@/lib/queryClient";
 
 export function useGameState() {
   const [playerId, setPlayerId] = useState<string | null>(null);
+  const [showLogin, setShowLogin] = useState(false);
   const queryClient = useQueryClient();
 
   // Initialize or get player
@@ -87,7 +88,21 @@ export function useGameState() {
             localStorage.setItem('kushKlickerPlayerId', newPlayer.id);
           } catch (retryError) {
             console.error('Failed to create player with fallback username:', retryError);
+            // If all creation attempts fail, show login to connect to existing account
+            setShowLogin(true);
           }
+        } else if (error instanceof Error && (
+          error.message.includes('already linked') || 
+          error.message.includes('wallet') ||
+          error.message.includes('Telegram') ||
+          error.message.includes('Discord')
+        )) {
+          // Account already exists with this data, show login to reconnect
+          console.log('Account already exists, showing login to reconnect');
+          setShowLogin(true);
+        } else {
+          // Unknown error, show login as fallback
+          setShowLogin(true);
         }
       }
     };
@@ -111,27 +126,8 @@ export function useGameState() {
     }
   });
 
-  // Auto-income simulation - refreshes every 2 seconds with whole numbers
-  useEffect(() => {
-    if (!gameState || typeof gameState !== 'object' || !('autoIncomePerHour' in gameState) || !gameState.autoIncomePerHour || gameState.autoIncomePerHour === 0) return;
-
-    const interval = setInterval(() => {
-      // Calculate income for 2 seconds and ensure it's a whole number
-      const incomePer2Seconds = Math.floor((gameState as any).autoIncomePerHour * 2 / 3600);
-      
-      if (incomePer2Seconds > 0) {
-        queryClient.setQueryData(['/api/players', playerId], (oldData: any) => {
-          if (!oldData) return oldData;
-          return {
-            ...oldData,
-            totalKush: oldData.totalKush + incomePer2Seconds
-          };
-        });
-      }
-    }, 2000); // Update every 2 seconds
-
-    return () => clearInterval(interval);
-  }, [gameState, playerId, queryClient]);
+  // Auto-income is now handled server-side during clicks to prevent sync issues
+  // The enhanced-click endpoint calculates accumulated auto-income since last activity
 
   const defaultGameState = {
     id: playerId || '',
@@ -155,11 +151,28 @@ export function useGameState() {
     lastActive: new Date()
   };
 
+  // Handle successful login
+  const handleLoginSuccess = (newPlayerId: string) => {
+    setPlayerId(newPlayerId);
+    setShowLogin(false);
+    localStorage.setItem('kushKlickerPlayerId', newPlayerId);
+  };
+
+  // Handle creating new account from login screen
+  const handleCreateNewAccount = () => {
+    setShowLogin(false);
+    localStorage.removeItem('kushKlickerPlayerId');
+    window.location.reload(); // Trigger re-initialization with fresh state
+  };
+
   return {
     gameState: gameState || defaultGameState,
     isLoading: isLoading && !gameState,
     error,
     isPlayerReady: !!(playerId && gameState),
+    showLogin,
+    handleLoginSuccess,
+    handleCreateNewAccount,
     refetchGameState: () => queryClient.invalidateQueries({ queryKey: ['/api/players', playerId] })
   };
 }

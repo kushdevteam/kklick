@@ -113,7 +113,7 @@ A basic session-based system using localStorage identifies players through auto-
 - **Global Events & Seasonal Content**: Incorporates 3 active seasonal events (e.g., Harvest Moon Festival, KUSH Rush Hour, Green Friday Sales) with dynamic multipliers and limited-time rewards.
 - **Enhanced Social Features**: Includes friend gift systems, squad farming bonuses, party clicking rewards, and loyalty multipliers.
 - **Manual Token Economy**: Utilizes Solana token `devwuNsNYACyiEYxRNqMNseBpNnGfnd4ZwNHL3sphqv` with manual distribution for achievements, marketplace, staking, and tournament rewards, managed via an admin panel with live balance checking.
-- **Token Burning & Grow Light System**: Allows players to burn real tokens via linked wallets, with a 20% dev tax. Features 14 grow light types providing passive KUSH and click multipliers, verified on-chain.
+- **Token Burning & Grow Light System**: Allows players to burn real tokens via linked wallets. Features 14 grow light types providing passive KUSH and click multipliers, verified on-chain.
 - **Advanced Admin Panel**: Complete management interface with tab navigation (Analytics, Players, Token Payouts, Notifications, System), real-time notifications, bulk operations, and persistent authentication.
 
 # External Dependencies
@@ -153,10 +153,17 @@ A basic session-based system using localStorage identifies players through auto-
 - **Connect-pg-simple**: PostgreSQL session storage for Express.
 - **Date-fns**: Date manipulation.
 
-## Recent Changes (September 2, 2025)
+## Recent Changes (September 10, 2025)
+- ✅ **Critical Burn Verification Fix**: Resolved zero completed burns issue that was blocking all grow light unlocks
+- ✅ **Security Hardening**: Added production-grade security measures to prevent fraudulent burn claims
+- ✅ **TypeScript Error Resolution**: Fixed all 26 TypeScript diagnostics in server/routes.ts
+- ✅ **Development Testing Enabled**: Burn verification now works properly in development mode
+- ✅ **Production Safety**: Burns disabled in production until real RPC verification is implemented
+- ✅ **Rate Limiting**: Added 3-attempt-per-minute limit to prevent spam burn submissions
+
+## Previous Changes (September 2, 2025)
 - ✅ **Admin Panel Fully Restored**: Fixed dual-server architecture, added complete tab system
 - ✅ **Real-time Notifications**: Added push notifications for token claim completions  
 - ✅ **Bulk Operations**: Implemented bulk approve/reject for multiple claims
 - ✅ **Analytics Dashboard**: Created comprehensive metrics display
 - ✅ **Module Resolution**: Fixed @shared imports in admin-panel/tsconfig.json
-- ✅ **Production Ready**: All systems operational, no critical errors

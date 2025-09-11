@@ -25,7 +25,7 @@ export default function StatsDisplay({ gameState }: StatsDisplayProps) {
   const perHourDisplay = Math.floor(gameState.autoIncomePerHour);
   const autoIncomeDisplay = gameState.autoIncomePerHour > 0 ? `${formatNumber(perHourDisplay)}/hr` : '0/hr';
   
-  // Calculate level based on total earned KUSH
+  // Calculate level based on total earned Points
   const calculatedLevel = calculateLevel(gameState.totalEarnedKush || gameState.totalKush);
   const level = gameState.level || calculatedLevel;
   const prestige = gameState.prestige || 0;
@@ -43,12 +43,12 @@ export default function StatsDisplay({ gameState }: StatsDisplayProps) {
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-      <div className="bg-card rounded-xl p-4 text-center border border-border" data-testid="stat-total-kush">
+      <div className="bg-card rounded-xl p-4 text-center border border-border" data-testid="stat-total-points">
         <div className="flex items-center justify-center space-x-2 mb-2">
-          <i className="fas fa-cannabis text-primary"></i>
-          <span className="text-primary font-medium text-sm">Total Kush</span>
+          <i className="fas fa-star text-primary"></i>
+          <span className="text-primary font-medium text-sm">Points</span>
         </div>
-        <div className="text-2xl font-bold text-foreground" data-testid="text-total-kush">
+        <div className="text-2xl font-bold text-foreground" data-testid="text-total-points">
           {formatNumber(gameState.totalKush)}
         </div>
       </div>
@@ -101,12 +101,12 @@ export default function StatsDisplay({ gameState }: StatsDisplayProps) {
         )}
       </div>
 
-      {/* On-chain Token Balance - only show if wallet is linked */}
+      {/* On-chain $KUSH Balance - only show if wallet is linked */}
       {walletLinked && (
         <div className="bg-card rounded-xl p-4 text-center border border-border" data-testid="stat-token-balance">
           <div className="flex items-center justify-center space-x-2 mb-2">
             <i className="fas fa-coins text-orange-500"></i>
-            <span className="text-orange-500 font-medium text-sm">On-Chain</span>
+            <span className="text-orange-500 font-medium text-sm">On-chain $KUSH</span>
           </div>
           <div className="text-2xl font-bold text-foreground" data-testid="text-token-balance">
             {isBalanceLoading ? (

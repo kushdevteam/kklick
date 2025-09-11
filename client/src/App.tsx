@@ -8,8 +8,9 @@ import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import Game from "@/pages/game";
 import Whitepaper from "@/pages/whitepaper";
-import Roadmap from "@/pages/roadmap";
 import AdminPanel from "@/pages/AdminPanel";
+import { AccountLogin } from "@/components/login/account-login";
+import { useGameState } from "@/hooks/use-game-state";
 import { useEffect } from "react";
 
 declare global {
@@ -56,12 +57,23 @@ declare global {
 }
 
 function Router() {
+  const { showLogin, handleLoginSuccess, handleCreateNewAccount } = useGameState();
+
+  // Show login screen if user needs to reconnect to existing account
+  if (showLogin) {
+    return (
+      <AccountLogin
+        onLoginSuccess={handleLoginSuccess}
+        onCreateNew={handleCreateNewAccount}
+      />
+    );
+  }
+
   return (
     <Switch>
       <Route path="/" component={Landing} />
       <Route path="/game" component={Game} />
       <Route path="/whitepaper" component={Whitepaper} />
-      <Route path="/roadmap" component={Roadmap} />
       <Route path="/admin" component={AdminPanel} />
       <Route component={NotFound} />
     </Switch>

@@ -37,7 +37,7 @@ export function FloatingKush({ x, y, value, id, onComplete }: FloatingKushProps)
       }}
     >
       <div className="flex items-center space-x-1">
-        <i className="fas fa-cannabis text-green-500"></i>
+        <img src="/favicon.png?v=092025" alt="KUSH Character" className="w-4 h-4 object-contain" />
         <span>+{value.toLocaleString()}</span>
       </div>
     </div>

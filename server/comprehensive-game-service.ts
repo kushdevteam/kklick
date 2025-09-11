@@ -195,7 +195,25 @@ class FriendsService {
 
   async acceptFriendRequest(playerId: string, friendshipId: string): Promise<boolean> {
     try {
+      // Get the friendship record to find both players
+      const friendship = await storage.getFriendshipById(friendshipId);
+      if (!friendship || friendship.friendId !== playerId) {
+        console.error('Invalid friendship or unauthorized access');
+        return false;
+      }
+
+      // Update the original request to accepted
       await storage.updateFriendshipStatus(friendshipId, 'accepted');
+      
+      // Create the reciprocal friendship so both players see each other as friends
+      await storage.createFriendship({
+        playerId: friendship.friendId, // The person who accepted
+        friendId: friendship.playerId, // The person who sent the request
+        status: 'accepted',
+        requestedAt: new Date(),
+        acceptedAt: new Date()
+      });
+      
       return true;
     } catch (error) {
       console.error('Error accepting friend request:', error);
@@ -736,15 +754,51 @@ class GrowGardenService {
   async getPlayerGarden(playerId: string): Promise<any[]> {
     const plots = await storage.getPlayerGardenPlots(playerId);
     
-    // If player has no plots, create initial plot
+    // If player has no plots, create all 6 initial plots
     if (plots.length === 0) {
-      const initialPlot = await storage.createGardenPlot({
+      const initialPlots = [];
+      
+      // Create plot 1 (always unlocked and free)
+      const plot1 = await storage.createGardenPlot({
         playerId,
         plotNumber: 1,
         isUnlocked: true,
         unlockCost: 0
       });
-      return [initialPlot];
+      initialPlots.push(plot1);
+      
+      // Create plots 2-6 (initially unlocked for better UX)
+      for (let plotNumber = 2; plotNumber <= 6; plotNumber++) {
+        const plot = await storage.createGardenPlot({
+          playerId,
+          plotNumber,
+          isUnlocked: true, // Making all plots unlocked by default for better gameplay
+          unlockCost: 0
+        });
+        initialPlots.push(plot);
+      }
+      
+      return initialPlots;
+    }
+    
+    // If player has some plots but not all 6, create missing ones
+    if (plots.length < 6) {
+      const existingPlotNumbers = plots.map(p => p.plotNumber);
+      
+      for (let plotNumber = 1; plotNumber <= 6; plotNumber++) {
+        if (!existingPlotNumbers.includes(plotNumber)) {
+          const newPlot = await storage.createGardenPlot({
+            playerId,
+            plotNumber,
+            isUnlocked: true,
+            unlockCost: 0
+          });
+          plots.push(newPlot);
+        }
+      }
+      
+      // Sort plots by plot number
+      plots.sort((a, b) => a.plotNumber - b.plotNumber);
     }
     
     return plots;
